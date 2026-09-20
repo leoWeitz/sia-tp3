@@ -1,0 +1,10 @@
+# Núcleo
+numpy~=2.1
+pandas~=2.2
+
+# Gráficos
+matplotlib~=3.9
+
+# Tests y calidad
+pytest~=8.3
+ruff~=0.6

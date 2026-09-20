@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Datasets provistos por la cátedra
+datasets/*.csv
+
+# Resultados: se versionan solo config y métricas
+results/**/*
+!results/**/config.json
+!results/**/metrics.json
+!results/.gitkeep
