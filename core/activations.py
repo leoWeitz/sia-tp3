@@ -1,6 +1,12 @@
 from typing import Protocol
+
 import numpy as np
 
+"""
+Convención de formas: todos los arrays son (n_muestras, n_features) y las
+operaciones son elemento a elemento, así que forward y backward devuelven un
+array de la misma forma que recibieron.
+"""
 
 class Activation(Protocol):
 
