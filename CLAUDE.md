@@ -31,7 +31,7 @@ Equipo de 4 personas. Entregable final: código + informe + presentación.
 
 | Cosa | Elección |
 | --- | --- |
-| Lenguaje | Python 3.11+ |
+| Lenguaje | Python 3.10+ |
 | Cálculo | NumPy |
 | Datos | pandas |
 | Gráficos | matplotlib |
