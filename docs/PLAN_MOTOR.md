@@ -38,8 +38,9 @@ Interfaz:
 ```python
 class Activation(Protocol):
     def forward(self, z: np.ndarray) -> np.ndarray: ...
-    def backward(self, z: np.ndarray) -> np.ndarray:   # derivada evaluada en z
+    def backward(self, z: np.ndarray) -> np.ndarray:  # derivada evaluada en z
         ...
+
 
 class Loss(Protocol):
     def value(self, y_true: np.ndarray, y_pred: np.ndarray) -> float: ...
@@ -71,7 +72,7 @@ Cuidados:
 ```python
 class Dense:
     def __init__(self, n_in, n_out, activation, initializer, rng): ...
-    def forward(self, x):          # guarda x y z para el backward
+    def forward(self, x):  # guarda x y z para el backward
         self.x = x
         self.z = x @ self.W + self.b
         return self.activation.forward(self.z)
@@ -94,10 +95,10 @@ class Dense:
     def backward(self, delta_out):
         """delta_out: dL/da de esta capa, forma (n, n_out).
         Devuelve dL/dx para la capa anterior y guarda grad_W, grad_b."""
-        delta = delta_out * self.activation.backward(self.z)   # (n, n_out)
-        self.grad_W = self.x.T @ delta                          # (n_in, n_out)
-        self.grad_b = delta.sum(axis=0, keepdims=True)          # (1, n_out)
-        return delta @ self.W.T                                 # (n, n_in)
+        delta = delta_out * self.activation.backward(self.z)  # (n, n_out)
+        self.grad_W = self.x.T @ delta  # (n_in, n_out)
+        self.grad_b = delta.sum(axis=0, keepdims=True)  # (1, n_out)
+        return delta @ self.W.T  # (n, n_in)
 ```
 
 `Network.backward(y_true, y_pred)` arranca con `loss.grad(...)` y recorre las capas al revés.
