@@ -84,7 +84,8 @@ sia_tp3/
 
 ## 5. Convenciones de código
 
-- **Idioma:** código, nombres e identificadores en inglés; docstrings, comentarios, informe y mensajes de commit en español.
+- **Idioma:** código, nombres, identificadores y mensajes de commit en inglés; docstrings, comentarios e informe en español.
+- **Commits:** una sola línea, uno por módulo, con prefijo `feat`, `fix` o `chore` y la rama como scope: `feat(main): add Dense layer with tests`.
 - **Formas de arrays:** siempre `(n_muestras, n_features)`. Documentar la forma esperada en el docstring de toda función que reciba o devuelva arrays.
 - **Bias separado:** cada capa guarda `W` de forma `(n_in, n_out)` y `b` de forma `(1, n_out)`. No agregar una columna de unos al dataset.
 - **Activaciones y pérdidas como objetos** con métodos `forward(x)` y `backward(x)` (o `grad`), no como funciones sueltas: así el optimizador y la red no necesitan saber cuál están usando.
