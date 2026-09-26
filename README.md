@@ -24,7 +24,7 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 | --- | --- | --- |
 | 0 | Andamiaje: estructura, dependencias, pytest, CI | ✅ |
 | 1 | Activaciones, pérdidas e inicializadores | ✅ |
-| 2 | Capa `Dense` y forward de `Network` | pendiente |
+| 2 | Capa `Dense` y forward de `Network` | ✅ |
 | 3 | Backward y gradient check numérico | pendiente |
 | 4 en adelante | `fit`, validación, runner, optimizadores, análisis | pendiente |
 
@@ -65,11 +65,31 @@ Uso: `get_loss("mse")`.
 
 Uso: `get_initializer("uniform", low=-1.0, high=1.0)`.
 
+**`layers.py`** — `Dense(n_in, n_out, activation, initializer, rng)` calcula `a = activation(x @ W + b)`.
+
+- `W` tiene forma `(n_in, n_out)` y `b` forma `(1, n_out)`; el bias se suma por broadcasting.
+- `forward(x)` guarda `x` y `z = x @ W + b` en la capa, porque el backward los va a necesitar.
+- Si `x` no tiene forma `(n_muestras, n_in)`, lanza error. Un vector suelto `(n_in,)` también se rechaza: una sola muestra se pasa como `(1, n_in)`.
+
+**`network.py`** — `Network(layer_sizes, *, hidden_activation, output_activation, initializer, rng)` arma una capa `Dense` por cada par de tamaños consecutivos.
+
+```python
+rng = np.random.default_rng(42)
+Network([2, 1], output_activation="identity", rng=rng)                  # perceptrón simple lineal
+Network([2, 1], output_activation=Tanh(beta=2.0), rng=rng)              # perceptrón simple no lineal
+Network([784, 64, 10], hidden_activation="relu", output_activation="softmax",
+        initializer="he", rng=rng)                                      # multicapa
+```
+
+- `predict(X)` encadena los forwards: de `(n_muestras, layer_sizes[0])` a `(n_muestras, layer_sizes[-1])`.
+- `n_params` da la cantidad total de parámetros entrenables, para el `metrics.json`.
+
 ### Qué verifican los tests
 
 - `test_activations.py`: cada derivada analítica contra la numérica `(f(z+ε) − f(z−ε)) / 2ε`, con ε = 1e-5 y tolerancia 1e-7, sobre valores negativos, cero y grandes. Estabilidad de `Sigmoid` y `Softmax`.
 - `test_losses.py`: el mismo chequeo numérico para el gradiente de cada pérdida; que el atajo de Softmax + entropía cruzada coincida con la derivada numérica respecto de `z`; valores calculados a mano; que no aparezcan `inf` ni `nan` con probabilidades 0 o 1.
 - `test_initializers.py`: formas, límites, varianza de He, y que la misma semilla dé los mismos pesos sin depender del estado global de NumPy.
+- `test_forward.py`: el criterio de aceptación de la Etapa 2, una red `[2, 2, 1]` con pesos elegidos a mano cuya salida está calculada paso a paso en los comentarios del test. También verifica que procesar un lote dé lo mismo que procesar cada muestra por separado, la cache de `x` y `z`, las formas de los parámetros y la reproducibilidad por semilla.
 
 ---
 
@@ -112,7 +132,15 @@ Softmax con otra pérdida (por ejemplo, MSE) no está soportado.
 - **Uniform** usa por default `U(−0.5, 0.5)`, la inicialización clásica del perceptrón simple.
 - Los **bias arrancan en cero**; el inicializador solo genera `W`.
 
-### 4. Detalles de robustez
+### 4. Cómo se construye una `Network`
+
+- **`rng` es obligatorio y se pasa por nombre.** No hay default: si faltara, la red usaría una semilla implícita y la corrida no sería reproducible. Las capas consumen el mismo `rng` en orden, así que dos capas del mismo tamaño no arrancan con los mismos pesos.
+- **Todos los argumentos, salvo `layer_sizes`, se pasan por nombre** (`hidden_activation=...`). Así no hay que recordar el orden y es más difícil confundir la activación oculta con la de salida.
+- **Activaciones e inicializador aceptan un nombre o un objeto.** Con el nombre (`"tanh"`) se usan los parámetros por defecto; para parámetros propios se pasa el objeto (`Tanh(beta=2.0)`, `Uniform(-1, 1)`). El runner de la Etapa 6 va a traducir la config JSON a objetos.
+- **Defaults:** capas ocultas `tanh`, salida `identity`, inicialización `xavier`.
+- **Una única activación para todas las capas ocultas.** Alcanza para los tres ejercicios; si hiciera falta mezclar activaciones, se agrega sin romper esta interfaz.
+
+### 5. Detalles de robustez
 
 - **Formas estrictas en las pérdidas.** Si `y_true` e `y_pred` tienen formas distintas, se lanza `ValueError`. Sin este chequeo, `(n,)` contra `(n, 1)` se expande a `(n, n)` y la pérdida da un número creíble pero incorrecto. Los targets siempre se pasan como `(n, 1)`, nunca como `(n,)`.
 - **Recorte de probabilidades.** Las entropías cruzadas recortan ŷ a `[1e-12, 1 − 1e-12]` antes del log, así la pérdida no se vuelve infinita cuando la salida satura.
