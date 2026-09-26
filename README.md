@@ -25,8 +25,9 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 | 0 | Andamiaje: estructura, dependencias, pytest, CI | ✅ |
 | 1 | Activaciones, pérdidas e inicializadores | ✅ |
 | 2 | Capa `Dense` y forward de `Network` | ✅ |
-| 3 | Backward y gradient check numérico | pendiente |
-| 4 en adelante | `fit`, validación, runner, optimizadores, análisis | pendiente |
+| 3 | Backward, gradient check numérico y optimizador `GD` | ✅ |
+| 4 | `fit`, mini-batch, `History` y callbacks | pendiente |
+| 5 en adelante | Validación, runner, Momentum y Adam, análisis | pendiente |
 
 ### Qué hay en `core/`
 
@@ -68,21 +69,50 @@ Uso: `get_initializer("uniform", low=-1.0, high=1.0)`.
 **`layers.py`** — `Dense(n_in, n_out, activation, initializer, rng)` calcula `a = activation(x @ W + b)`.
 
 - `W` tiene forma `(n_in, n_out)` y `b` forma `(1, n_out)`; el bias se suma por broadcasting.
-- `forward(x)` guarda `x` y `z = x @ W + b` en la capa, porque el backward los va a necesitar.
+- `forward(x)` guarda `x` y `z = x @ W + b` en la capa, porque el backward los necesita.
 - Si `x` no tiene forma `(n_muestras, n_in)`, lanza error. Un vector suelto `(n_in,)` también se rechaza: una sola muestra se pasa como `(1, n_in)`.
+- `backward(grad_a)` recibe dL/da, lo multiplica por la derivada de la activación evaluada en `z` y sigue como `backward_z`.
+- `backward_z(delta)` recibe dL/dz ya calculado, guarda `grad_W = x.T @ delta` y `grad_b = delta.sum(axis=0)`, y devuelve dL/dx `= delta @ W.T` para la capa anterior. Es la entrada que usa el par Softmax + CCE (ver decisión 2).
+- `params` devuelve `[W, b]` y `grads` devuelve `[grad_W, grad_b]`, en el mismo orden.
 
 **`network.py`** — `Network(layer_sizes, *, hidden_activation, output_activation, initializer, rng)` arma una capa `Dense` por cada par de tamaños consecutivos.
 
 ```python
 rng = np.random.default_rng(42)
-Network([2, 1], output_activation="identity", rng=rng)                  # perceptrón simple lineal
-Network([2, 1], output_activation=Tanh(beta=2.0), rng=rng)              # perceptrón simple no lineal
-Network([784, 64, 10], hidden_activation="relu", output_activation="softmax",
-        initializer="he", rng=rng)                                      # multicapa
+
+# Perceptrón simple lineal
+Network([2, 1], output_activation="identity", rng=rng)
+
+# Perceptrón simple no lineal
+Network([2, 1], output_activation=Tanh(beta=2.0), rng=rng)
+
+# Multicapa
+Network(
+    [784, 64, 10], hidden_activation="relu", output_activation="softmax", initializer="he", rng=rng
+)
 ```
 
 - `predict(X)` encadena los forwards: de `(n_muestras, layer_sizes[0])` a `(n_muestras, layer_sizes[-1])`.
+- `backward(y_true, y_pred, loss)` calcula los gradientes de todas las capas, recorriéndolas de la última a la primera. `y_pred` tiene que ser la salida del `predict` inmediatamente anterior.
+- `params` y `grads` son las listas `[W1, b1, W2, b2, ...]` y `[grad_W1, grad_b1, ...]`, en el mismo orden, listas para pasarle al optimizador.
 - `n_params` da la cantidad total de parámetros entrenables, para el `metrics.json`.
+
+**`optimizers.py`** — un optimizador tiene `step(params, grads)` y actualiza cada parámetro in place. No calcula ni modifica gradientes.
+
+| Nombre | Clase | Parámetros | Paso |
+| --- | --- | --- | --- |
+| `gd` | `GD` | `lr=0.01` | `θ ← θ − lr · g` |
+
+Uso: `get_optimizer("gd", lr=0.1)`. Momentum y Adam llegan en la Etapa 7.
+
+Un paso de entrenamiento completo, hasta que la Etapa 4 lo envuelva en `fit`:
+
+```python
+loss, opt = get_loss("mse"), get_optimizer("gd", lr=0.1)
+y_pred = net.predict(X)
+net.backward(y, y_pred, loss)
+opt.step(net.params, net.grads)
+```
 
 ### Qué verifican los tests
 
@@ -90,12 +120,21 @@ Network([784, 64, 10], hidden_activation="relu", output_activation="softmax",
 - `test_losses.py`: el mismo chequeo numérico para el gradiente de cada pérdida; que el atajo de Softmax + entropía cruzada coincida con la derivada numérica respecto de `z`; valores calculados a mano; que no aparezcan `inf` ni `nan` con probabilidades 0 o 1.
 - `test_initializers.py`: formas, límites, varianza de He, y que la misma semilla dé los mismos pesos sin depender del estado global de NumPy.
 - `test_forward.py`: el criterio de aceptación de la Etapa 2, una red `[2, 2, 1]` con pesos elegidos a mano cuya salida está calculada paso a paso en los comentarios del test. También verifica que procesar un lote dé lo mismo que procesar cada muestra por separado, la cache de `x` y `z`, las formas de los parámetros y la reproducibilidad por semilla.
+- `test_gradients.py`: **el gradient check numérico**, criterio de aceptación de la Etapa 3. Para cada parámetro compara el gradiente del backward contra `(L(θ+ε) − L(θ−ε)) / 2ε` y exige un error relativo menor a 1e-6. Cubre:
+  - las 6 combinaciones del plan: capas ocultas `tanh`, `sigmoid` y `relu`, cada una con salida `identity` + MSE y con `softmax` + CCE;
+  - salidas `tanh` y `sigmoid` con MSE, y `sigmoid` con BCE;
+  - perceptrón simple (sin capas ocultas) y redes con varias capas ocultas.
+
+  Además, **verifica que el propio chequeo detecte bugs**: introduce a propósito cuatro errores típicos de backprop (derivada evaluada en `a` en vez de `z`, bias que no suma sobre el lote, signo invertido, falta de la derivada de la activación) y comprueba que en todos el gradient check falle. Si el chequeo no los detectara, que pase en verde no probaría nada.
+
+  Con la semilla fija, el peor error relativo de las 6 combinaciones del plan está entre 3e-10 y 6e-9: el margen contra la tolerancia es amplio.
+- `test_optimizers.py`: un paso de `GD` calculado a mano, que actualice los pesos de la red in place, y que la pérdida baje en cada paso en `y = x`.
 
 ---
 
 ## Decisiones de diseño a validar con el equipo
 
-Estas decisiones no estaban fijadas en `CLAUDE.md` ni en el plan. Si alguien no está de acuerdo, conviene cambiarlas **antes de la Etapa 3**, porque el gradient check y el learning rate dependen de ellas.
+Estas decisiones no estaban fijadas en `CLAUDE.md` ni en el plan. Si alguien no está de acuerdo, conviene cambiarlas **antes de la Etapa 4**: el gradient check ya está en verde con ellas, y de la 1 depende también la escala del learning rate.
 
 ### 1. Las pérdidas se promedian, y el gradiente ya viene dividido por `n`
 
@@ -121,9 +160,9 @@ La derivada de Softmax es una matriz jacobiana por muestra, no un array de la fo
 CategoricalCrossEntropy().softmax_delta(y_true, y_pred)  # dL/dz = (ŷ − y) / n
 ```
 
-**Contrato para la Etapa 3:** cuando la capa de salida es `Softmax`, la red calcula el delta de salida con `loss.softmax_delta(...)` y **no** multiplica por la derivada de la activación. En cualquier otro caso usa `loss.grad(...) * activation.backward(z)`. Además de ser más barato, este atajo es más estable porque no divide por ŷ.
+**Cómo lo usa `Network.backward`:** cuando la capa de salida es `Softmax`, calcula el delta de salida con `loss.softmax_delta(...)` y se lo pasa a `Dense.backward_z`, **sin** multiplicar por la derivada de la activación. En cualquier otro caso usa `Dense.backward(loss.grad(...))`, que sí multiplica por `activation.backward(z)`. Además de ser más barato, el atajo es más estable porque no divide por ŷ.
 
-Softmax con otra pérdida (por ejemplo, MSE) no está soportado.
+Softmax con otra pérdida (por ejemplo, MSE) lanza `ValueError` en el backward.
 
 ### 3. Variantes de inicialización
 
@@ -140,7 +179,14 @@ Softmax con otra pérdida (por ejemplo, MSE) no está soportado.
 - **Defaults:** capas ocultas `tanh`, salida `identity`, inicialización `xavier`.
 - **Una única activación para todas las capas ocultas.** Alcanza para los tres ejercicios; si hiciera falta mezclar activaciones, se agrega sin romper esta interfaz.
 
-### 5. Detalles de robustez
+### 5. Backward y optimizador
+
+- **La pérdida se pasa al backward** (`net.backward(y, y_pred, loss)`): la red no guarda una pérdida propia. Así, en la Etapa 4, `fit` recibe la pérdida como parámetro, como dice el plan, y se puede evaluar una red con una pérdida distinta de la usada para entrenar.
+- **`params` y `grads` son referencias, no copias.** El optimizador tiene que actualizar in place (`p -= lr * g`), nunca reasignar (`p = p - lr * g`): una reasignación crea un array nuevo y la capa sigue usando el viejo, así que la red no aprendería. Un test lo verifica para `GD`, y Momentum y Adam tienen que respetar lo mismo.
+- **`GD` entra en esta etapa** porque el `CLAUDE.md` (sección 9, paso 3) lo pone junto al backward. En el plan aparece recién en la Etapa 4, pero es una línea y permite probar un paso de entrenamiento completo.
+- **Hacer backward antes de un forward lanza `RuntimeError`**, en vez de calcular gradientes con datos viejos o inexistentes.
+
+### 6. Detalles de robustez
 
 - **Formas estrictas en las pérdidas.** Si `y_true` e `y_pred` tienen formas distintas, se lanza `ValueError`. Sin este chequeo, `(n,)` contra `(n, 1)` se expande a `(n, n)` y la pérdida da un número creíble pero incorrecto. Los targets siempre se pasan como `(n, 1)`, nunca como `(n,)`.
 - **Recorte de probabilidades.** Las entropías cruzadas recortan ŷ a `[1e-12, 1 − 1e-12]` antes del log, así la pérdida no se vuelve infinita cuando la salida satura.
