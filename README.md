@@ -26,7 +26,7 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 | 1 | Activaciones, pérdidas e inicializadores | ✅ |
 | 2 | Capa `Dense` y forward de `Network` | ✅ |
 | 3 | Backward, gradient check numérico y optimizador `GD` | ✅ |
-| 4 | `fit`, mini-batch, `History` y callbacks | pendiente |
+| 4 | `fit`, mini-batch, `History` y callbacks | ✅ |
 | 5 en adelante | Validación, runner, Momentum y Adam, análisis | pendiente |
 
 ### Qué hay en `core/`
@@ -105,14 +105,38 @@ Network(
 
 Uso: `get_optimizer("gd", lr=0.1)`. Momentum y Adam llegan en la Etapa 7.
 
-Un paso de entrenamiento completo, hasta que la Etapa 4 lo envuelva en `fit`:
+**Entrenamiento con `fit`** — `Network.fit` repite, época tras época, el paso `predict` → `backward` → `optimizer.step` sobre cada lote:
 
 ```python
-loss, opt = get_loss("mse"), get_optimizer("gd", lr=0.1)
-y_pred = net.predict(X)
-net.backward(y, y_pred, loss)
-opt.step(net.params, net.grads)
+# X: (n_muestras, n_in), y: (n_muestras, n_out)
+history = net.fit(
+    X,
+    y,
+    optimizer=get_optimizer("gd", lr=0.1),
+    loss=get_loss("mse"),
+    epochs=200,
+    batch_size=32,  # None = lote completo, 1 = estocástico
+    validation=(X_val, y_val),  # opcional: agrega val_loss y val_metric
+    metric=accuracy,  # opcional: f(y_true, y_pred) -> float
+    callbacks=[PrintProgress(every=10, write=print), EarlyStopping(patience=20)],
+)
+history.to_csv("results/<run_id>/history.csv")
 ```
+
+- **Lotes:** con `batch_size=k`, el orden de las muestras se baraja al empezar cada época y el último lote puede ser más chico. Con lote completo no se baraja, porque el orden no cambia el gradiente.
+- **`evaluate(X, y, loss, metric=None)`** devuelve `{"loss": ..., "metric": ...}` sin entrenar.
+
+**`history.py`** — `History` guarda un dict por época con las columnas del `history.csv` del contrato de resultados: `epoch, train_loss, val_loss, train_metric, val_metric, elapsed_s`.
+
+- `history.column("train_loss")` devuelve los valores por época como array, con NaN donde no se registró (por ejemplo, `val_loss` sin validación).
+- `history.to_csv(path)` escribe el CSV; lo que no se registró queda vacío.
+
+**`callbacks.py`** — la única forma de observar o cortar un `fit`. Un callback hereda de `Callback` y redefine lo que necesita: `on_train_begin(network)`, `on_epoch_end(epoch, logs, network)` (si devuelve `True`, corta) y `on_train_end(network)`.
+
+| Callback | Qué hace |
+| --- | --- |
+| `PrintProgress(every, write)` | Reporta los logs en la primera época y cada `every`. `write` es obligatorio, por ejemplo `write=print`. |
+| `EarlyStopping(patience, monitor="val_loss", mode="min", min_delta=0.0, restore_best=True)` | Corta si `monitor` no mejora durante `patience` épocas seguidas. Con `restore_best`, al terminar deja la red con los pesos de la mejor época. Expone `best_epoch` y `stopped_epoch`. |
 
 ### Qué verifican los tests
 
@@ -129,6 +153,11 @@ opt.step(net.params, net.grads)
 
   Con la semilla fija, el peor error relativo de las 6 combinaciones del plan está entre 3e-10 y 6e-9: el margen contra la tolerancia es amplio.
 - `test_optimizers.py`: un paso de `GD` calculado a mano, que actualice los pesos de la red in place, y que la pérdida baje en cada paso en `y = x`.
+- `test_training.py`: el criterio de aceptación de la Etapa 4. Con `y = x`, 50 muestras y `GD(lr=0.1)` a lote completo, el MSE baja en todas las épocas y termina por debajo de 1e-4 (lo alcanza en la época 49 de 300). También verifica:
+  - que el modo estocástico y el mini-batch converjan;
+  - que `fit` a lote completo dé exactamente lo mismo que el paso manual de la Etapa 3;
+  - la cantidad de pasos por época, que la misma semilla dé el mismo entrenamiento, y las columnas del historial y del CSV;
+  - los callbacks: el orden de las llamadas, el corte, y que `EarlyStopping` restaure la mejor época in place, respete `mode` y `min_delta`, y corte si el entrenamiento diverge (NaN).
 
 ---
 
@@ -186,7 +215,16 @@ Softmax con otra pérdida (por ejemplo, MSE) lanza `ValueError` en el backward.
 - **`GD` entra en esta etapa** porque el `CLAUDE.md` (sección 9, paso 3) lo pone junto al backward. En el plan aparece recién en la Etapa 4, pero es una línea y permite probar un paso de entrenamiento completo.
 - **Hacer backward antes de un forward lanza `RuntimeError`**, en vez de calcular gradientes con datos viejos o inexistentes.
 
-### 6. Detalles de robustez
+### 6. Entrenamiento (`fit`, historial y callbacks)
+
+- **La pérdida de cada época se mide sobre el conjunto completo**, con los pesos del final de la época. No es el promedio de las pérdidas de los lotes, que mezcla pesos distintos a lo largo de la época y no es comparable entre `batch_size` distintos. Cuesta un forward extra por época.
+- **`fit` recibe `metric`** además de lo que dice el plan. Hace falta para las columnas `train_metric` y `val_metric` del `history.csv`. Es una función `f(y_true, y_pred) -> float`; las funciones concretas (accuracy, F1, etc.) llegan con `metrics.py` en la Etapa 6.
+- **La red guarda su `rng`** y lo usa para barajar los lotes, así que la semilla de la config determina tanto los pesos iniciales como el orden de las muestras. `fit(..., rng=...)` permite usar otro generador.
+- **`PrintProgress` exige `write`.** El `CLAUDE.md` prohíbe `print` en `core/`, y el plan pide un callback que imprima. La salida es que el callback no elija el destino: quien llama a `fit` pasa `write=print` (o un logger, o `list.append` en los tests).
+- **`EarlyStopping` restaura los mejores pesos por default** (`restore_best=True`), también cuando las épocas se agotan sin cortar. Así, lo que se evalúa y se guarda es la red de la mejor época, que es la que se reporta en `metrics.json`. Monitorear una clave que no está en los logs (por ejemplo, `val_loss` sin validación) lanza un error que explica qué falta.
+- **Archivos nuevos:** `history.py` y `callbacks.py` no estaban en la estructura del `CLAUDE.md`. Los separé de `network.py` para que no creciera de más; si se prefiere, pueden vivir ahí.
+
+### 7. Detalles de robustez
 
 - **Formas estrictas en las pérdidas.** Si `y_true` e `y_pred` tienen formas distintas, se lanza `ValueError`. Sin este chequeo, `(n,)` contra `(n, 1)` se expande a `(n, n)` y la pérdida da un número creíble pero incorrecto. Los targets siempre se pasan como `(n, 1)`, nunca como `(n,)`.
 - **Recorte de probabilidades.** Las entropías cruzadas recortan ŷ a `[1e-12, 1 − 1e-12]` antes del log, así la pérdida no se vuelve infinita cuando la salida satura.
