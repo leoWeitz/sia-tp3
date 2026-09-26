@@ -9,9 +9,10 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from core.activations import Activation, get_activation
+from core.activations import Activation, Softmax, get_activation
 from core.initializers import Initializer, get_initializer
 from core.layers import Dense
+from core.losses import CategoricalCrossEntropy, Loss
 
 
 class Network:
@@ -58,6 +59,37 @@ class Network:
         for layer in self.layers:
             a = layer.forward(a)
         return a
+
+    def backward(self, y_true: np.ndarray, y_pred: np.ndarray, loss: Loss) -> None:
+        """Calcula grad_W y grad_b de todas las capas a partir del último predict.
+
+        y_true e y_pred: (n_muestras, layer_sizes[-1]); y_pred tiene que ser la
+        salida del predict inmediatamente anterior, que dejó x y z en cada capa.
+        """
+        output = self.layers[-1]
+        if isinstance(output.activation, Softmax):
+            # Par acoplado: dL/dz = (ŷ − y) / n directamente, sin la jacobiana
+            # de Softmax. Ver CategoricalCrossEntropy.softmax_delta.
+            if not isinstance(loss, CategoricalCrossEntropy):
+                raise ValueError(
+                    "Una salida Softmax solo se puede entrenar con CategoricalCrossEntropy, "
+                    f"llegó {type(loss).__name__}."
+                )
+            grad = output.backward_z(loss.softmax_delta(y_true, y_pred))
+        else:
+            grad = output.backward(loss.grad(y_true, y_pred))
+        for layer in reversed(self.layers[:-1]):
+            grad = layer.backward(grad)
+
+    @property
+    def params(self) -> list[np.ndarray]:
+        """[W1, b1, W2, b2, ...]. Referencias: el optimizador los actualiza in place."""
+        return [p for layer in self.layers for p in layer.params]
+
+    @property
+    def grads(self) -> list[np.ndarray]:
+        """[grad_W1, grad_b1, ...], en el mismo orden que params."""
+        return [g for layer in self.layers for g in layer.grads]
 
     @property
     def n_params(self) -> int:

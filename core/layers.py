@@ -36,6 +36,9 @@ class Dense:
         # Cache del último forward, para el backward.
         self.x: np.ndarray | None = None
         self.z: np.ndarray | None = None
+        # Gradientes del último backward, misma forma que W y b.
+        self.grad_W: np.ndarray = np.zeros_like(self.W)
+        self.grad_b: np.ndarray = np.zeros_like(self.b)
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """x: (n_muestras, n_in). Devuelve la activación, (n_muestras, n_out)."""
@@ -44,6 +47,41 @@ class Dense:
         self.x = x
         self.z = x @ self.W + self.b
         return self.activation.forward(self.z)
+
+    def backward(self, grad_a: np.ndarray) -> np.ndarray:
+        """grad_a: dL/da de esta capa, (n_muestras, n_out).
+
+        Pasa a dL/dz multiplicando por la derivada de la activación, evaluada
+        en z (no en a), y sigue como backward_z. Devuelve dL/dx, (n_muestras, n_in).
+        """
+        if self.z is None:
+            raise RuntimeError("backward antes de forward: no hay x ni z guardados.")
+        return self.backward_z(grad_a * self.activation.backward(self.z))
+
+    def backward_z(self, delta: np.ndarray) -> np.ndarray:
+        """delta: dL/dz ya calculado, (n_muestras, n_out).
+
+        Entrada directa para cuando la red calcula dL/dz sin pasar por la
+        derivada de la activación (el par Softmax + CCE). Guarda grad_W y
+        grad_b y devuelve dL/dx, (n_muestras, n_in).
+        """
+        if self.x is None:
+            raise RuntimeError("backward antes de forward: no hay x ni z guardados.")
+        # Las pérdidas ya dividen por n_muestras, así que acá solo se suma
+        # sobre el lote: x.T @ delta suma los aportes de cada muestra.
+        self.grad_W = self.x.T @ delta  # (n_in, n_out)
+        self.grad_b = delta.sum(axis=0, keepdims=True)  # (1, n_out)
+        return delta @ self.W.T  # (n_muestras, n_in)
+
+    @property
+    def params(self) -> list[np.ndarray]:
+        """[W, b]. Son referencias: el optimizador los actualiza in place."""
+        return [self.W, self.b]
+
+    @property
+    def grads(self) -> list[np.ndarray]:
+        """[grad_W, grad_b], en el mismo orden que params."""
+        return [self.grad_W, self.grad_b]
 
     @property
     def n_params(self) -> int:
