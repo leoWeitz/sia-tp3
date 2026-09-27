@@ -217,11 +217,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Datasets provistos por la cátedra
-datasets/*.csv
+# Datasets provistos por la cátedra (cada uno los copia localmente; no se suben)
+datasets/*
+!datasets/.gitkeep
 
-# Resultados: se versionan solo config y métricas
+# Resultados: se versionan solo config, métricas y resúmenes
 results/**/*
+!results/**/
 !results/**/config.json
 !results/**/metrics.json
+!results/**/summary.csv
+!results/**/final_eval.json
 !results/.gitkeep
