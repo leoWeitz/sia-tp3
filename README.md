@@ -189,7 +189,7 @@ history = fit_perceptron(net, X, y, lr=0.1, epochs=100)  # y: (n_muestras, 1) co
 
 ## Decisiones de diseño a validar con el equipo
 
-Estas decisiones no estaban fijadas en `CLAUDE.md` ni en el plan. Si alguien no está de acuerdo, conviene cambiarlas **antes de la Etapa 4**: el gradient check ya está en verde con ellas, y de la 1 depende también la escala del learning rate.
+Estas decisiones no estaban fijadas en `CLAUDE.md` ni en el plan.
 
 ### 1. Las pérdidas se promedian, y el gradiente ya viene dividido por `n`
 
