@@ -3,11 +3,11 @@ import csv
 import numpy as np
 import pytest
 
-from core.callbacks import Callback, EarlyStopping, PrintProgress
+from core.callbacks import AdaptiveEta, Callback, EarlyStopping, PrintProgress
 from core.history import COLUMNS, History
 from core.losses import MSE
 from core.network import Network
-from core.optimizers import GD
+from core.optimizers import GD, Adam
 
 
 def linear_data(n: int = 50, seed: int = 0):
@@ -300,6 +300,74 @@ def test_early_stopping_sin_validacion_falla_con_mensaje_claro():
 def test_early_stopping_parametros_invalidos(kwargs):
     with pytest.raises(ValueError):
         EarlyStopping(**kwargs)
+
+
+# --- AdaptiveEta (04-matematica §4.1) ---
+
+
+def lr_after_each_epoch(eta: AdaptiveEta, losses, monitor="train_loss") -> list[float]:
+    """Pasa una secuencia sintética de pérdidas al callback; devuelve lr tras cada época."""
+    eta.on_train_begin(None)
+    out = []
+    for epoch, value in enumerate(losses, start=1):
+        eta.on_epoch_end(epoch, {monitor: value}, None)
+        out.append(eta.optimizer.lr)
+    return out
+
+
+def test_adaptive_eta_sube_tras_k_bajas_y_baja_tras_k_prime_subas():
+    eta = AdaptiveEta(GD(lr=1.0), a=0.1, b=0.5, k=2, k_prime=2)
+    losses = [1.0, 0.9, 0.8, 0.7, 0.6, 0.7, 0.8, 0.9, 1.0]
+    # Época 3: segunda baja seguida → +a. Reinicia, época 5: otra vez +a.
+    # Época 7: segunda suba seguida → ×(1 − b). Reinicia, época 9: otra vez.
+    expected = [1.0, 1.0, 1.1, 1.1, 1.2, 1.2, 0.6, 0.6, 0.3]
+    np.testing.assert_allclose(lr_after_each_epoch(eta, losses), expected)
+
+
+def test_adaptive_eta_racha_interrumpida_o_empate_reinicia_contadores():
+    eta = AdaptiveEta(GD(lr=1.0), a=0.1, b=0.5, k=3, k_prime=2)
+    # Bajas: 1, (suba), 1, 2, (empate), 1, 2 → nunca 3 seguidas.
+    # Subas: la única racha es de 1.
+    losses = [1.0, 0.9, 1.0, 0.9, 0.8, 0.8, 0.7, 0.6]
+    assert lr_after_each_epoch(eta, losses) == [1.0] * len(losses)
+
+
+def test_adaptive_eta_respeta_min_lr():
+    eta = AdaptiveEta(GD(lr=1e-3), a=0.1, b=0.9, k=5, k_prime=1, min_lr=5e-4)
+    lrs = lr_after_each_epoch(eta, [1.0, 2.0, 3.0, 4.0])
+    assert lrs == [1e-3, 5e-4, 5e-4, 5e-4]
+
+
+def test_adaptive_eta_monitor_configurable_y_ausente_falla():
+    eta = AdaptiveEta(GD(lr=1.0), a=0.5, b=0.5, k=1, k_prime=1, monitor="val_loss")
+    assert lr_after_each_epoch(eta, [1.0, 0.5], monitor="val_loss") == [1.0, 1.5]
+    with pytest.raises(ValueError, match="val_loss"):
+        lr_after_each_epoch(eta, [1.0], monitor="train_loss")
+
+
+def test_adaptive_eta_funciona_con_cualquier_optimizador():
+    opt = Adam(lr=0.01)
+    lrs = lr_after_each_epoch(AdaptiveEta(opt, a=0.01, b=0.5, k=1, k_prime=1), [1.0, 0.5, 0.6])
+    np.testing.assert_allclose(lrs, [0.01, 0.02, 0.01])
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"a": 0.0},
+        {"a": -0.1},
+        {"b": 0.0},
+        {"b": 1.0},
+        {"k": 0},
+        {"k_prime": 0},
+        {"min_lr": -1.0},
+    ],
+    ids=lambda kw: next(iter(kw)),
+)
+def test_adaptive_eta_parametros_invalidos(kwargs):
+    params = {"a": 0.1, "b": 0.5, "k": 2, "k_prime": 2} | kwargs
+    with pytest.raises(ValueError):
+        AdaptiveEta(GD(), **params)
 
 
 # --- History ---
