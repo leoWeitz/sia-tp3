@@ -2,7 +2,7 @@
 
 Notación de la cátedra: $\xi^\mu$ (o $x^\mu$) entrada del dato $\mu$, $\zeta^\mu$ salida esperada, $O^\mu$ salida obtenida, $h$ excitación, $\theta$ activación, $\eta$ tasa de aprendizaje, $p$ cantidad de datos, $V^m$ salida de la capa $m$ (con $V^0 = \xi$). En el código (motor existente): `X` entradas, `y` esperadas, `y_pred` salidas, `z` pre-activación (= $h$), `a` activación (= $V$), `W (n_in, n_out)`, `b (1, n_out)`.
 
-> **Convenciones del código que difieren de la teórica** (todas equivalentes, documentadas en §2.2, §2.4 y §3.3): la MSE es un **promedio sin ½**; `W` se guarda como **(n_in, n_out)**, o sea transpuesta respecto de $W_{ij}$ de la cátedra (i = neurona destino); la logística del código hoy usa β sin el 2 (se alinea en F04-T0).
+> **Convenciones del código que difieren de la teórica** (todas equivalentes, documentadas en §2.2, §2.4 y §3.3): la MSE es un **promedio sin ½**; `W` se guarda como **(n_in, n_out)**, o sea transpuesta respecto de $W_{ij}$ de la cátedra (i = neurona destino). La logística del código ya usa el 2β de la cátedra (alineada en F04-T0).
 
 Todo módulo que implemente una fórmula de este archivo debe citar la sección en su docstring.
 
@@ -46,7 +46,7 @@ $\theta(h) = \tanh(\beta h)$, imagen $(-1,1)$, $\theta'(h) = \beta\,(1 - \theta^
 ### §2.2 Logística (convención de la cátedra, con 2β)
 $\theta(h) = \dfrac{1}{1 + e^{-2\beta h}}$, imagen $(0,1)$, $\theta'(h) = 2\beta\,\theta(h)\,(1 - \theta(h))$.
 
-**En el código hoy:** `Sigmoid(beta)` calcula $1/(1+e^{-\beta z})$, o sea `Sigmoid(beta=b)` = logística de la cátedra con $\beta = b/2$. Propuesta a confirmar con el equipo: alinear el código a la cátedra (F04-T0: cambiar a $2\beta$ en `forward` y `backward`), para que los β que se reportan en la presentación sean los de la teoría. Identidad útil para el test: $\theta_{2\beta}(h) = \tfrac12\big(1 + \tanh(\beta h)\big)$.
+**En el código:** `Sigmoid(beta)` calcula $1/(1+e^{-2\beta z})$ y su derivada $2\beta\,\theta(1-\theta)$ (alineado en F04-T0), así que los β que se reportan son los de la teoría. Identidad que lo verifica en `tests/test_activations.py`: $\theta_{2\beta}(h) = \tfrac12\big(1 + \tanh(\beta h)\big)$.
 
 ### §2.3 Extras (ya implementadas; se usan como variantes)
 - ReLU: $\theta(h) = \max(0, h)$, $\theta'(h) = \mathbb{1}[h>0]$.

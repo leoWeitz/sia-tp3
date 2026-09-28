@@ -79,6 +79,14 @@ def test_sigmoid_no_desborda():
     np.testing.assert_allclose(out, [[0.0, 1.0]])
 
 
+@pytest.mark.parametrize("beta", [0.5, 1.0, 2.0])
+def test_sigmoid_es_la_logistica_de_la_catedra_con_2beta(beta):
+    # 1 / (1 + exp(−2βz)) = ½ (1 + tanh(βz))  (04-matematica §2.2)
+    # atol: en z = −50 la logística da ~1e−44 y ½(1 + tanh) redondea a 0 exacto.
+    expected = 0.5 * (1.0 + np.tanh(beta * Z))
+    np.testing.assert_allclose(Sigmoid(beta=beta).forward(Z), expected, rtol=1e-12, atol=1e-15)
+
+
 def test_softmax_valor_conocido():
     # exp(0) = 1, exp(ln 2) = 2  ->  [1/3, 2/3]
     z = np.array([[0.0, np.log(2.0)]])

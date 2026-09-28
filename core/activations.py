@@ -67,13 +67,18 @@ class Tanh:
 
 
 class Sigmoid:
-    """f(z) = 1 / (1 + exp(-beta * z)), con imagen en (0, 1)."""
+    """f(z) = 1 / (1 + exp(-2 * beta * z)), con imagen en (0, 1).
+
+    Logística con la convención de la cátedra (04-matematica §2.2): el 2 hace
+    que f(z) = ½ (1 + tanh(beta * z)), así que los β que se reportan son los
+    de la teoría.
+    """
 
     def __init__(self, beta: float = 1.0) -> None:
         self.beta = beta
 
     def forward(self, z: np.ndarray) -> np.ndarray:
-        bz = self.beta * z
+        bz = 2.0 * self.beta * z
         # Versión estable: exp(-|bz|) está siempre en (0, 1] y nunca desborda.
         # Para bz >= 0 es la fórmula usual; para bz < 0 se multiplica arriba y
         # abajo por exp(bz), que da e / (1 + e).
@@ -81,9 +86,9 @@ class Sigmoid:
         return np.where(bz >= 0.0, 1.0 / (1.0 + e), e / (1.0 + e))
 
     def backward(self, z: np.ndarray) -> np.ndarray:
-        # d/dz sigmoid(beta*z) = beta * s * (1 - s)
+        # d/dz sigmoid(2*beta*z) = 2 * beta * s * (1 - s)
         s = self.forward(z)
-        return self.beta * s * (1.0 - s)
+        return 2.0 * self.beta * s * (1.0 - s)
 
 
 class ReLU:

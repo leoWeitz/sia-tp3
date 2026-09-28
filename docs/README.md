@@ -30,10 +30,10 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | Fase | Spec | Depende de | Estado |
 |---|---|---|---|
 | F00 | [Setup](fases/F00-setup.md) | — | ✅ Hecho |
-| F01 | [Núcleo numérico](fases/F01-nucleo.md) | — | ✅ Hecho (ajuste menor de β en F04-T0) |
+| F01 | [Núcleo numérico](fases/F01-nucleo.md) | — | ✅ Hecho (β de la logística alineado con la cátedra en F04-T0) |
 | F02 | [Perceptrón simple](fases/F02-perceptron-simple.md) | — | ✅ Hecho |
 | F03 | [Multicapa + backprop](fases/F03-mlp.md) | — | ✅ Hecho |
-| F04 | [Optimizadores, regularización y extensiones de `fit`](fases/F04-optimizadores.md) | motor | ⏳ |
+| F04 | [Optimizadores, regularización y extensiones de `fit`](fases/F04-optimizadores.md) | motor | ✅ Hecho |
 | F05 | [Datos](fases/F05-datos.md) | — (conviene después de F09) | ⏳ |
 | F06 | [Métricas y umbral](fases/F06-metricas.md) | — | ⏳ |
 | F07 | [Runner, configs, save/load](fases/F07-infra-experimentos.md) | F04, F05, F06 | ⏳ |

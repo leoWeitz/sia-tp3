@@ -12,6 +12,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from core.network import Network
+    from core.optimizers import Optimizer
 
 
 class Callback:
@@ -114,3 +115,77 @@ class EarlyStopping(Callback):
             for p, best in zip(network.params, self._best_params, strict=True):
                 # In place: la capa tiene que seguir apuntando al mismo array.
                 p[...] = best
+
+
+class AdaptiveEta(Callback):
+    """η adaptativo de la cátedra (04-matematica §4.1), combinable con cualquier optimizador.
+
+    Mira `monitor` al final de cada época y lo compara con la época anterior:
+    tras k bajas seguidas suma `a` a optimizer.lr; tras k_prime subas seguidas
+    lo multiplica por (1 − b), sin bajar nunca de min_lr. Una suba corta la
+    racha de bajas y viceversa; un empate (o NaN) corta las dos. Después de
+    cada cambio de η los contadores vuelven a cero.
+
+    El η nuevo se usa desde la época siguiente, así que la columna lr del
+    historial muestra el cambio una época después de que se decidió.
+    """
+
+    def __init__(
+        self,
+        optimizer: "Optimizer",
+        a: float,
+        b: float,
+        k: int,
+        k_prime: int,
+        monitor: str = "train_loss",
+        min_lr: float = 1e-8,
+    ) -> None:
+        if not a > 0:
+            raise ValueError(f"a tiene que ser positivo, llegó {a}")
+        if not 0 < b < 1:
+            raise ValueError(f"b tiene que estar en (0, 1), llegó {b}")
+        if k < 1 or k_prime < 1:
+            raise ValueError(f"k y k_prime tienen que ser >= 1, llegaron {k} y {k_prime}")
+        if min_lr < 0:
+            raise ValueError(f"min_lr no puede ser negativo, llegó {min_lr}")
+        if not hasattr(optimizer, "lr"):
+            raise ValueError(f"{type(optimizer).__name__} no tiene un atributo lr que ajustar")
+        self.optimizer = optimizer
+        self.a = a
+        self.b = b
+        self.k = k
+        self.k_prime = k_prime
+        self.monitor = monitor
+        self.min_lr = min_lr
+
+    def on_train_begin(self, network: "Network") -> None:
+        self._previous: float | None = None
+        self._decreases = 0
+        self._increases = 0
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
+        if self.monitor not in logs:
+            raise ValueError(
+                f"AdaptiveEta monitorea {self.monitor!r}, que no está en los logs ({sorted(logs)})."
+            )
+        value = logs[self.monitor]
+        previous, self._previous = self._previous, value
+        if previous is None:
+            return False
+
+        if value < previous:
+            self._decreases += 1
+            self._increases = 0
+        elif value > previous:
+            self._increases += 1
+            self._decreases = 0
+        else:
+            self._decreases = self._increases = 0
+
+        if self._decreases >= self.k:
+            self.optimizer.lr += self.a
+            self._decreases = self._increases = 0
+        elif self._increases >= self.k_prime:
+            self.optimizer.lr = max(self.optimizer.lr * (1.0 - self.b), self.min_lr)
+            self._decreases = self._increases = 0
+        return False

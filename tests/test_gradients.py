@@ -28,19 +28,30 @@ def make_targets(loss_name: str, n: int, m: int, rng: np.random.Generator) -> np
     return rng.normal(size=(n, m))
 
 
-def max_relative_error(net: Network, X: np.ndarray, y: np.ndarray, loss) -> float:
-    """Corre forward + backward y devuelve el peor error relativo entre todos los parámetros."""
-    net.backward(y, net.predict(X), loss)
+def max_relative_error(
+    net: Network, X: np.ndarray, y: np.ndarray, loss, l2: float = 0.0, l2_in_backward=None
+) -> float:
+    """Corre forward + backward y devuelve el peor error relativo entre todos los parámetros.
+
+    El objetivo numérico es loss.value + net.l2_penalty(l2). l2_in_backward es
+    el λ que recibe el backward (por default el mismo l2): pasarle otro simula
+    un bug en el término L2 del gradiente.
+    """
+    l2_in_backward = l2 if l2_in_backward is None else l2_in_backward
+    net.backward(y, net.predict(X), loss, l2=l2_in_backward)
     analytic = [g.copy() for g in net.grads]
+
+    def objective() -> float:
+        return loss.value(y, net.predict(X)) + net.l2_penalty(l2)
 
     worst = 0.0
     for param, g_a in zip(net.params, analytic, strict=True):
         for idx in np.ndindex(param.shape):
             original = param[idx]
             param[idx] = original + EPS
-            plus = loss.value(y, net.predict(X))
+            plus = objective()
             param[idx] = original - EPS
-            minus = loss.value(y, net.predict(X))
+            minus = objective()
             param[idx] = original
 
             g_n = (plus - minus) / (2 * EPS)
@@ -104,6 +115,37 @@ def test_gradient_check_softmax_con_varias_capas(layers):
     net, X, rng = build(layers, "relu", "softmax", seed=3)
     y = make_targets("categorical_crossentropy", N_SAMPLES, layers[-1], rng)
     assert max_relative_error(net, X, y, CategoricalCrossEntropy()) < REL_TOL
+
+
+# --- L2 / weight decay (04-matematica §5) ---
+
+
+@pytest.mark.parametrize("l2", [0.01, 0.5])
+def test_gradient_check_con_l2(l2):
+    # Gradiente de loss.value + l2/2 · Σ‖W‖² contra el analítico del backward con l2.
+    net, X, rng = build([3, 4, 2], "tanh", "identity")
+    y = make_targets("mse", N_SAMPLES, 2, rng)
+    assert max_relative_error(net, X, y, MSE(), l2=l2) < REL_TOL
+
+
+def test_l2_no_se_aplica_a_los_bias():
+    net, X, rng = build([3, 4, 2], "tanh", "identity")
+    y = make_targets("mse", N_SAMPLES, 2, rng)
+    y_pred = net.predict(X)
+    net.backward(y, y_pred, MSE())
+    plain = [g.copy() for g in net.grads]
+    net.backward(y, y_pred, MSE(), l2=0.5)
+    for layer, g_W, g_b in zip(net.layers, plain[0::2], plain[1::2], strict=True):
+        np.testing.assert_allclose(layer.grad_W, g_W + 0.5 * layer.W)
+        np.testing.assert_array_equal(layer.grad_b, g_b)
+
+
+def test_gradient_check_detecta_l2_mal_aplicado():
+    # Sin el término (o con el factor mal) el chequeo contra la pérdida penalizada falla.
+    net, X, rng = build([3, 4, 2], "tanh", "identity")
+    y = make_targets("mse", N_SAMPLES, 2, rng)
+    assert max_relative_error(net, X, y, MSE(), l2=0.5, l2_in_backward=0.0) > 1e-3
+    assert max_relative_error(net, X, y, MSE(), l2=0.5, l2_in_backward=1.0) > 1e-3
 
 
 # --- El gradient check tiene que fallar con los errores típicos de backprop ---

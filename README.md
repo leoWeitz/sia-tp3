@@ -28,7 +28,8 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 | 3 | Backward, gradient check numérico y optimizador `GD` | ✅ |
 | 4 | `fit`, mini-batch, `History` y callbacks | ✅ |
 | 5 | Ejercicio previo de validación: AND, `y = x`, `y = tanh(x)`, XOR y verificación manual | ✅ (falta rehacer la verificación manual en papel) |
-| 6 en adelante | Runner y datos, Momentum y Adam, análisis | pendiente |
+| F04 | Momentum, RMSProp, Adam, AdaGrad, η adaptativo, L2, augmentation, varias métricas, columna `lr`, divergencia, logística con 2β | ✅ |
+| F05 en adelante | Datos, métricas, runner, análisis (ver `docs/README.md`) | pendiente |
 
 ### Qué hay en `core/`
 
@@ -41,7 +42,7 @@ Todo array tiene forma `(n_muestras, n_features)`. Cada módulo expone objetos (
 | `step` | `Step` | — | Devuelve ±1. `backward` lanza error: se entrena con la regla del perceptrón, no con backprop. |
 | `identity` | `Identity` | — | |
 | `tanh` | `Tanh` | `beta=1.0` | `tanh(beta·z)`, imagen (−1, 1). |
-| `sigmoid` | `Sigmoid` | `beta=1.0` | Imagen (0, 1). Implementación estable, no desborda con `z` grande. |
+| `sigmoid` | `Sigmoid` | `beta=1.0` | `1 / (1 + exp(−2·beta·z))` = `½ (1 + tanh(beta·z))`, convención de la cátedra. Imagen (0, 1). Implementación estable, no desborda con `z` grande. |
 | `relu` | `ReLU` | — | Por convención, derivada 0 en `z = 0`. |
 | `softmax` | `Softmax` | — | Por fila, estable (resta el máximo). `backward` lanza error: ver decisión 2. |
 
@@ -94,7 +95,8 @@ Network(
 ```
 
 - `predict(X)` encadena los forwards: de `(n_muestras, layer_sizes[0])` a `(n_muestras, layer_sizes[-1])`.
-- `backward(y_true, y_pred, loss)` calcula los gradientes de todas las capas, recorriéndolas de la última a la primera. `y_pred` tiene que ser la salida del `predict` inmediatamente anterior.
+- `backward(y_true, y_pred, loss, l2=0.0)` calcula los gradientes de todas las capas, recorriéndolas de la última a la primera. `y_pred` tiene que ser la salida del `predict` inmediatamente anterior. Con `l2 > 0` suma `l2 · W` a cada `grad_W` (nunca a los bias).
+- `l2_penalty(l2)` devuelve `l2/2 · Σ‖W‖²`, la penalidad cuyo gradiente agrega el backward. `fit` **no** la suma a `train_loss`/`val_loss`, para que las curvas se puedan comparar entre distintos λ.
 - `params` y `grads` son las listas `[W1, b1, W2, b2, ...]` y `[grad_W1, grad_b1, ...]`, en el mismo orden, listas para pasarle al optimizador.
 - `n_params` da la cantidad total de parámetros entrenables, para el `metrics.json`.
 
@@ -102,9 +104,21 @@ Network(
 
 | Nombre | Clase | Parámetros | Paso |
 | --- | --- | --- | --- |
-| `gd` | `GD` | `lr=0.01` | `θ ← θ − lr · g` |
+Fórmulas en `docs/04-matematica.md` §4. `g²` y las divisiones son elemento a elemento.
 
-Uso: `get_optimizer("gd", lr=0.1)`. Momentum y Adam llegan en la Etapa 7.
+| Nombre | Clase | Parámetros | Paso |
+| --- | --- | --- | --- |
+| `gd` | `GD` | `lr=0.01` | `θ ← θ − lr · g` |
+| `momentum` | `Momentum` | `lr=0.01, alpha=0.9` | `Δθ ← −lr · g + alpha · Δθ`; `θ ← θ + Δθ` (versión de la cátedra) |
+| `rmsprop` | `RMSProp` | `lr=0.001, gamma=0.9, eps=1e-8` | `S ← gamma · S + (1 − gamma) · g²`; `θ ← θ − lr · g / √(S + eps)` |
+| `adam` | `Adam` | `lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8` | momentos `m`, `v` con corrección de sesgo; `θ ← θ − lr · m̂ / (√v̂ + eps)` |
+| `adagrad` | `AdaGrad` | `lr=0.01, eps=1e-8` | `G ← G + g²`; `θ ← θ − lr · g / (√G + eps)` |
+
+Uso: `get_optimizer("adam", lr=0.01)`. Todos validan sus parámetros (`lr > 0`, `alpha`, `gamma`, `beta1`, `beta2` en `[0, 1)`, `eps > 0`).
+
+- **Estado por tensor:** la velocidad, los promedios y `t` se indexan por posición en la lista `params` y se crean en el primer `step`.
+- **`lr` es un atributo mutable:** `AdaptiveEta` lo cambia entre épocas y `fit` registra su valor en la columna `lr`.
+- **`state_dict()` / `load_state_dict(state)`:** un dict plano con `kind`, `lr`, los hiperparámetros, `t` y los buffers como `<buffer>_<i>` (por ejemplo `m_0`, `v_0`). Se guarda con `np.savez(path, **opt.state_dict())` sin pickle y, al cargarlo, la trayectoria sigue idéntica a no haber cortado. Cargar el estado de otro optimizador es un error.
 
 **Entrenamiento con `fit`** — `Network.fit` repite, época tras época, el paso `predict` → `backward` → `optimizer.step` sobre cada lote:
 
@@ -120,12 +134,20 @@ history = net.fit(
     validation=(X_val, y_val),  # opcional: agrega val_loss y val_metric
     metric=accuracy,  # opcional: f(y_true, y_pred) -> float
     callbacks=[PrintProgress(every=10, write=print), EarlyStopping(patience=20)],
+    metrics={"mae": mae},  # opcional: agrega train_mae y val_mae
+    l2=1e-4,  # opcional: weight decay, solo sobre W
+    augment=GaussianNoise(sigma=0.05, clip=(0, 1)),  # opcional: solo lotes de train
 )
 history.to_csv("results/<run_id>/history.csv")
 ```
 
 - **Lotes:** con `batch_size=k`, el orden de las muestras se baraja al empezar cada época y el último lote puede ser más chico. Con lote completo no se baraja, porque el orden no cambia el gradiente.
-- **`evaluate(X, y, loss, metric=None)`** devuelve `{"loss": ..., "metric": ...}` sin entrenar.
+- **`evaluate(X, y, loss, metric=None)`** devuelve `{"loss": ..., "metric": ...}` sin entrenar. Nunca aplica augmentation.
+- **`metrics`:** por cada nombre registra `train_<nombre>` y, con validación, `val_<nombre>`. Convive con `metric`. Los nombres `"loss"`, `"metric"` y el vacío son un error. Cada época hace un solo `predict` sobre train y otro sobre validación para todas las métricas.
+- **`l2`:** ver `backward` y `l2_penalty` más arriba.
+- **`augment`:** se aplica a cada lote de entrenamiento con un generador hijo del de la red (`rng.spawn`), así que activar augmentation no cambia el orden de los lotes. Las pérdidas y métricas registradas son siempre sobre los datos limpios.
+- **Columna `lr`:** si el optimizador tiene atributo `lr`, cada época registra el η con el que entrenó. Un cambio de `AdaptiveEta` al final de la época `e` aparece en la fila `e + 1`.
+- **Divergencia:** si `train_loss` deja de ser finito, la época se registra, los callbacks la ven, `history.status` pasa a `"diverged"` y el entrenamiento se corta sin esperar paciencia. `on_train_end` se llama igual.
 
 **`perceptron.py`** — `fit_perceptron(network, X, y, lr, epochs, batch_size=None, callbacks=(), rng=None)` entrena el perceptrón simple escalón con la regla del perceptrón, `Δw = η (y − ŷ) x`, porque el escalón no es derivable.
 
@@ -138,10 +160,11 @@ history = fit_perceptron(net, X, y, lr=0.1, epochs=100)  # y: (n_muestras, 1) co
 - En el historial, `train_loss` es la **tasa de error** (fracción de muestras mal clasificadas), no una pérdida continua.
 - Devuelve un `History` y acepta los mismos callbacks que `fit`.
 
-**`history.py`** — `History` guarda un dict por época con las columnas del `history.csv` del contrato de resultados: `epoch, train_loss, val_loss, train_metric, val_metric, elapsed_s`.
+**`history.py`** — `History` guarda un dict por época con las columnas del `history.csv` del contrato de resultados: `epoch, train_loss, val_loss, train_metric, val_metric, lr, elapsed_s`, más columnas dinámicas `train_<x>` / `val_<x>` (una por métrica de `metrics`). Cualquier otra clave es un error.
 
-- `history.column("train_loss")` devuelve los valores por época como array, con NaN donde no se registró (por ejemplo, `val_loss` sin validación).
-- `history.to_csv(path)` escribe el CSV; lo que no se registró queda vacío.
+- `history.column("train_loss")` devuelve los valores por época como array, con NaN donde no se registró (por ejemplo, `val_loss` sin validación). También acepta las columnas dinámicas.
+- `history.to_csv(path)` escribe el CSV: primero las columnas fijas y después las dinámicas en orden alfabético; lo que no se registró queda vacío.
+- `history.status` es `"ok"` o `"diverged"`.
 
 **`callbacks.py`** — la única forma de observar o cortar un `fit`. Un callback hereda de `Callback` y redefine lo que necesita: `on_train_begin(network)`, `on_epoch_end(epoch, logs, network)` (si devuelve `True`, corta) y `on_train_end(network)`.
 
@@ -149,27 +172,55 @@ history = fit_perceptron(net, X, y, lr=0.1, epochs=100)  # y: (n_muestras, 1) co
 | --- | --- |
 | `PrintProgress(every, write)` | Reporta los logs en la primera época y cada `every`. `write` es obligatorio, por ejemplo `write=print`. |
 | `EarlyStopping(patience, monitor="val_loss", mode="min", min_delta=0.0, restore_best=True)` | Corta si `monitor` no mejora durante `patience` épocas seguidas. Con `restore_best`, al terminar deja la red con los pesos de la mejor época. Expone `best_epoch` y `stopped_epoch`. |
+| `AdaptiveEta(optimizer, a, b, k, k_prime, monitor="train_loss", min_lr=1e-8)` | η adaptativo de la cátedra (`docs/04-matematica.md` §4.1): tras `k` bajas seguidas de `monitor` suma `a` a `optimizer.lr`; tras `k_prime` subas seguidas lo multiplica por `(1 − b)`, sin bajar de `min_lr`. Una suba corta la racha de bajas y viceversa; un empate corta las dos; tras cada cambio los contadores vuelven a cero. Sirve con cualquier optimizador. |
+
+**`augmentation.py`** — una augmentation se llama como `aug(X, rng)` y devuelve un array nuevo de la misma forma, sin modificar `X`.
+
+| Nombre | Clase | Qué hace |
+| --- | --- | --- |
+| `gaussian_noise` | `GaussianNoise(sigma, clip=None)` | `X + N(0, sigma²)`, recortado a `clip = (lo, hi)` (escalares o arrays por feature). |
+| `random_shift` | `RandomShift(max_px, image_shape)` | Interpreta cada fila como imagen `image_shape` y la traslada un entero en `[−max_px, max_px]` en x e y, rellenando con el mínimo de la fila (el fondo). Vectorizado: el loop es sobre los desplazamientos, no sobre las muestras. |
+| — | `Compose([aug1, aug2])` | Aplica varias en orden con el mismo generador. |
+
+Uso desde la config: `get_augmentation({"kind": "gaussian_noise", "sigma": 0.05, "clip": [0, 1]})`; una lista de dicts arma un `Compose`.
 
 ### Qué verifican los tests
 
-- `test_activations.py`: cada derivada analítica contra la numérica `(f(z+ε) − f(z−ε)) / 2ε`, con ε = 1e-5 y tolerancia 1e-7, sobre valores negativos, cero y grandes. Estabilidad de `Sigmoid` y `Softmax`.
+- `test_activations.py`: cada derivada analítica contra la numérica `(f(z+ε) − f(z−ε)) / 2ε`, con ε = 1e-5 y tolerancia 1e-7, sobre valores negativos, cero y grandes. Estabilidad de `Sigmoid` y `Softmax`, y que `Sigmoid(beta)` sea la logística de la cátedra: `½ (1 + tanh(beta·z))`.
 - `test_losses.py`: el mismo chequeo numérico para el gradiente de cada pérdida; que el atajo de Softmax + entropía cruzada coincida con la derivada numérica respecto de `z`; valores calculados a mano; que no aparezcan `inf` ni `nan` con probabilidades 0 o 1.
 - `test_initializers.py`: formas, límites, varianza de He, y que la misma semilla dé los mismos pesos sin depender del estado global de NumPy.
 - `test_forward.py`: el criterio de aceptación de la Etapa 2, una red `[2, 2, 1]` con pesos elegidos a mano cuya salida está calculada paso a paso en los comentarios del test. También verifica que procesar un lote dé lo mismo que procesar cada muestra por separado, la cache de `x` y `z`, las formas de los parámetros y la reproducibilidad por semilla.
 - `test_gradients.py`: **el gradient check numérico**, criterio de aceptación de la Etapa 3. Para cada parámetro compara el gradiente del backward contra `(L(θ+ε) − L(θ−ε)) / 2ε` y exige un error relativo menor a 1e-6. Cubre:
   - las 6 combinaciones del plan: capas ocultas `tanh`, `sigmoid` y `relu`, cada una con salida `identity` + MSE y con `softmax` + CCE;
   - salidas `tanh` y `sigmoid` con MSE, y `sigmoid` con BCE;
-  - perceptrón simple (sin capas ocultas) y redes con varias capas ocultas.
+  - perceptrón simple (sin capas ocultas) y redes con varias capas ocultas;
+  - `[3, 4, 2]` tanh + MSE **con L2**: el gradiente de `loss + l2_penalty` coincide con el del backward, los bias no reciben término L2, y el chequeo falla si el término falta o tiene el factor mal.
 
   Además, **verifica que el propio chequeo detecte bugs**: introduce a propósito cuatro errores típicos de backprop (derivada evaluada en `a` en vez de `z`, bias que no suma sobre el lote, signo invertido, falta de la derivada de la activación) y comprueba que en todos el gradient check falle. Si el chequeo no los detectara, que pase en verde no probaría nada.
 
   Con la semilla fija, el peor error relativo de las 6 combinaciones del plan está entre 3e-10 y 6e-9: el margen contra la tolerancia es amplio.
-- `test_optimizers.py`: un paso de `GD` calculado a mano, que actualice los pesos de la red in place, y que la pérdida baje en cada paso en `y = x`.
+- `test_optimizers.py`: un paso de `GD` calculado a mano y que la pérdida baje en cada paso en `y = x`. Para cada optimizador:
+  - pasos a mano con `g = 0.5`, `η = 0.1` (Momentum en dos pasos, RMSProp y AdaGrad en uno, y Adam en `t = 1`, que da un paso de `η · sign(g)`);
+  - que actualice los pesos de la red in place;
+  - que minimice `½ θᵀ diag(1, 10) θ` desde `(1, 1)` hasta `‖θ‖ < 1e-3` en ≤ 2000 pasos. Los `lr` son propios del test, porque Adam con su default `1e-3` no llega a tiempo. Pasos medidos: GD 66, Momentum 129, RMSProp 132, AdaGrad 215, Adam 276;
+  - que `state_dict` → `np.savez` → `load_state_dict` en un optimizador nuevo siga la misma trayectoria que no haber cortado;
+  - la validación de parámetros.
+
+  También registra, sin assertar un orden, cuántas épocas tarda XOR `[2, 2, 1]` tanh + MSE, Xavier, en 20 semillas (`pytest tests/test_optimizers.py -k xor --log-cli-level=INFO`):
+
+  | Optimizador | Semillas resueltas en ≤ 2000 épocas | Mediana de épocas (entre las resueltas) |
+  | --- | --- | --- |
+  | `GD(lr=0.1)` | 17/20 | 50 |
+  | `Momentum(lr=0.1, alpha=0.9)` | 17/20 | 24 |
+  | `Adam(lr=0.01)` | 11/20 | 94 |
 - `test_training.py`: el criterio de aceptación de la Etapa 4. Con `y = x`, 50 muestras y `GD(lr=0.1)` a lote completo, el MSE baja en todas las épocas y termina por debajo de 1e-4 (lo alcanza en la época 49 de 300). También verifica:
   - que el modo estocástico y el mini-batch converjan;
   - que `fit` a lote completo dé exactamente lo mismo que el paso manual de la Etapa 3;
   - la cantidad de pasos por época, que la misma semilla dé el mismo entrenamiento, y las columnas del historial y del CSV;
-  - los callbacks: el orden de las llamadas, el corte, y que `EarlyStopping` restaure la mejor época in place, respete `mode` y `min_delta`, y corte si el entrenamiento diverge (NaN).
+  - los callbacks: el orden de las llamadas, el corte, y que `EarlyStopping` restaure la mejor época in place, respete `mode` y `min_delta`, y corte si el entrenamiento diverge (NaN);
+  - `AdaptiveEta` con secuencias sintéticas de pérdidas: sube, baja, reinicia contadores, respeta `min_lr`, y la columna `lr` refleja los cambios;
+  - las extensiones de F04: `metrics` (records y CSV), columnas dinámicas de `History`, que `l2` grande achique la norma de los pesos, que `GD(lr=1e6)` en `y = x` termine con `status == "diverged"` sin excepción, y que augmentation se aplique solo a los lotes de train, sea reproducible y no cambie el orden de los lotes.
+- `test_augmentation.py`: que ninguna augmentation modifique `X`, que `sigma = 0` sea la identidad, la reproducibilidad por semilla, `clip`, que `RandomShift` mueva un píxel encendido a una posición válida y rellene con el fondo, `Compose` y `get_augmentation`.
 - `test_validation.py`: **el ejercicio previo de validación** (Etapa 5). Los casos que dependen de la inicialización se corren con 20 semillas, porque una sola corrida no alcanza para concluir.
 
   | Caso | Modelo | Criterio | Resultado con las 20 semillas |
@@ -237,7 +288,7 @@ Softmax con otra pérdida (por ejemplo, MSE) lanza `ValueError` en el backward.
 ### 5. Backward y optimizador
 
 - **La pérdida se pasa al backward** (`net.backward(y, y_pred, loss)`): la red no guarda una pérdida propia. Así, en la Etapa 4, `fit` recibe la pérdida como parámetro, como dice el plan, y se puede evaluar una red con una pérdida distinta de la usada para entrenar.
-- **`params` y `grads` son referencias, no copias.** El optimizador tiene que actualizar in place (`p -= lr * g`), nunca reasignar (`p = p - lr * g`): una reasignación crea un array nuevo y la capa sigue usando el viejo, así que la red no aprendería. Un test lo verifica para `GD`, y Momentum y Adam tienen que respetar lo mismo.
+- **`params` y `grads` son referencias, no copias.** El optimizador tiene que actualizar in place (`p -= lr * g`), nunca reasignar (`p = p - lr * g`): una reasignación crea un array nuevo y la capa sigue usando el viejo, así que la red no aprendería. Un test lo verifica para cada optimizador (`GD`, `Momentum`, `RMSProp`, `Adam`, `AdaGrad`), y también sus buffers de estado se actualizan in place.
 - **`GD` entra en esta etapa** porque el `CLAUDE.md` (sección 9, paso 3) lo pone junto al backward. En el plan aparece recién en la Etapa 4, pero es una línea y permite probar un paso de entrenamiento completo.
 - **Hacer backward antes de un forward lanza `RuntimeError`**, en vez de calcular gradientes con datos viejos o inexistentes.
 
