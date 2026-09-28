@@ -7,8 +7,13 @@
 | **Depende de** | F12 (protocolo, mejor config de Ej2 como punto de partida) |
 | **Estimación** | 5 h + cómputo |
 
+## Lo que ya sabemos (verificado)
+- `more_digits.csv`: 15 741 filas, **incluye 8 (585) y más 5 (542)**, que faltaban o escaseaban en `digits.csv`. Aun así, 8 y 5 siguen siendo las clases con menos ejemplos (el resto ≈ 1 750–2 000).
+- **3 689 filas de `more_digits.csv` también están en `digits.csv`**; ninguna está en `digits_test.csv`. La unión deduplicada tiene 24 501 filas.
+- Esto hace que el principal "factor externo" (E3-c) sea la **composición del dataset** (aparecen los 8), no solo la cantidad de datos.
+
 ## Datos
-- Desarrollo: `more_digits.csv` (y, si la cátedra lo permite, también `digits.csv ∪ more_digits.csv`, deduplicado). Mismo protocolo que F12 (split estratificado para validación).
+- Desarrollo: `more_digits.csv` (y, si la cátedra lo permite, también `digits.csv ∪ more_digits.csv`, **deduplicado**: sin deduplicar, 3 689 imágenes quedarían repetidas y podrían caer una en train y otra en validación). Mismo protocolo que F12 (split estratificado para validación).
 - Producción: `digits_test.csv`, **igual que en Ej2**, para que la comparación Ej2 vs Ej3 sea directa.
 - EDA corta (se agrega a `docs/datos/digits.md`): tamaño, balance, distribución de píxeles vs `digits.csv`, duplicados con `digits.csv` y **con `digits_test.csv`** (fuga de información: si hay, se reporta y se decide qué hacer).
 
@@ -16,14 +21,15 @@
 
 | Técnica | Dónde está | Hipótesis |
 |---|---|---|
-| Más datos | `more_digits.csv` | El factor principal (E3-c) |
+| Más datos (y, sobre todo, la aparición de los 8) | `more_digits.csv` | El factor principal (E3-c) |
 | Early stopping | F04 | Evita sobreajuste con redes más grandes |
 | L2 / weight decay | F04 | Reduce el gap train-val |
-| Data augmentation: ruido gaussiano, traslaciones ±1–2 px (si son imágenes) | F04 | Más robustez; clave si el test tiene variaciones de trazo/posición |
+| Data augmentation: ruido gaussiano, traslaciones ±1–2 px (imágenes 28×28) | F04 | Más robustez; clave si el test tiene variaciones de trazo/posición |
 | Arquitectura más grande (más ancho/profundidad) | F03 | Más capacidad ahora que hay más datos |
 | Adam + mejor η / η adaptativo | F04 | Converge mejor y más rápido |
 | Softmax + entropía cruzada (variante) | F01/F03 | Gradientes más informativos en clasificación multiclase (confirmar con la cátedra que se acepta como variante) |
 | Ensamble de semillas (promediar salidas de N redes) | análisis | Técnica de regularización mencionada en la Clase 13 |
+| Balanceo de clases (sobremuestreo de 5 y 8 en train, o augmentation focalizada en esas clases) | extensión chica del runner (`dataset.balance: "oversample"`, solo sobre train) | 8 y 5 siguen siendo minoritarias; ver recall por clase |
 
 ## Experimentos
 
@@ -33,7 +39,7 @@
 | `ej3_search` | Barrido OFAT sobre las técnicas de la tabla, partiendo de `ej3_baseline` | E3-b |
 | `ej3_best` | Combinación final + ≥ 5 semillas; opcional ensamble | E3-a |
 | `ej3_ablation` | Partiendo de `ej3_best`, **quitar una técnica por vez** | E3-b (qué aporta cada una) |
-| `ej3_data_factors` | Mejor config con fracciones {10, 25, 50, 75, 100 %} del conjunto de desarrollo (curva de aprendizaje por cantidad de datos); y `digits` vs `more_digits` vs unión | E3-c |
+| `ej3_data_factors` | Mejor config con fracciones {10, 25, 50, 75, 100 %} del conjunto de desarrollo (curva de aprendizaje por cantidad de datos); `digits` vs `more_digits` vs unión; y recall del 8 y del 5 en cada caso | E3-c |
 | `ej3_final` | `--final-eval` en `digits_test.csv` | E3-a |
 
 ## Análisis y figuras (`analysis/ej3.py` → `figures/ej3/`)

@@ -27,6 +27,14 @@ def load_csv(path, target: str, features: list[str] | None = None, drop: Sequenc
 - **No** imputa ni limpia en silencio: con `na_policy="error"` informa NaN por columna; `"drop_rows"` descarta y lo registra en `meta`.
 - Guarda el sha256 del archivo en `meta` (el runner lo copia a `metrics.json`).
 
+```python
+def load_digits_csv(path, cache: bool = True) -> Dataset
+```
+- Formato real de `digits.csv`, `digits_test.csv` y `more_digits.csv` (verificado): dos columnas, `label` (entero 0–9) e `image` (**texto** con una lista de 784 floats en [0, 1], imagen 28×28 aplanada por filas). `load_csv` no sirve para este formato.
+- Parsear `image` con `json.loads` y apilar en `X (p, 784)` float64 (≈ 3 s para `digits.csv`; el loader de la cátedra usa `ast.literal_eval`, que es equivalente pero más lento). `y` = `label` como entero.
+- `feature_names = ["px_0", …, "px_783"]`, `meta` con `image_shape = (28, 28)`, sha256 y cantidad de filas.
+- `cache=True`: la primera vez guarda `X`, `y` en un `.npz` al lado del CSV (en `datasets/`, que está en `.gitignore`) y las siguientes lo carga si el sha256 del CSV coincide.
+
 ### `data/preprocess.py`
 - Scalers con API `fit(X) -> self`, `transform(X)`, `inverse_transform(X)`, `state_dict()` / `from_state_dict()`:
   - `MinMaxScaler(feature_range=(0, 1))`, `StandardScaler()`, `UnitLengthScaler()` (por fila, sin estado), `IdentityScaler()`.
@@ -50,6 +58,8 @@ prepare_fold(dataset, idx_train, idx_val, normalize="minmax", target_encoding="n
 `and_dataset()`, `xor_dataset()`, `line_samples(f, n, lo, hi, rng)` con las entradas del enunciado (±1).
 
 ## Tests y criterios de aceptación (`tests/test_data.py`)
+> Los tests **nunca** dependen de `datasets/` (el CI no tiene los CSV): usan archivos sintéticos chicos creados en `tmp_path`. Si se agrega algún test con datos reales, se marca con `pytest.mark.skipif` cuando el archivo no existe.
+
 - [ ] `MinMaxScaler` lleva train exactamente a `[a, b]`; `inverse_transform(transform(X)) ≈ X`; columna constante → `a` con `warnings.warn`.
 - [ ] `StandardScaler`: media ≈ 0 y desvío ≈ 1 en train; desvío 0 → 0.
 - [ ] `UnitLengthScaler`: norma 2 de cada fila = 1; fila nula queda nula.
@@ -59,6 +69,7 @@ prepare_fold(dataset, idx_train, idx_val, normalize="minmax", target_encoding="n
 - [ ] `one_hot` con `neg=-1`; forma `(n, k)`.
 - [ ] `load_csv` falla con mensaje claro ante columna inexistente o NaN (con `na_policy="error"`); `categorical` genera las columnas esperadas.
 - [ ] `synthetic`: AND y XOR iguales a los del enunciado (y a los de `tests/test_validation.py`).
+- [ ] `load_digits_csv` sobre un CSV sintético con el mismo formato (3 filas, `image` como texto): `X` de forma `(3, 784)` en [0, 1], `y` enteros, `image_shape == (28, 28)`; la segunda carga usa el caché y da lo mismo; si cambia el CSV, el caché se invalida.
 
 ## Entregables
 Rama `f05-datos` lista para PR. El agente propone los mensajes de commit (`feat(F05): ...`) y no commitea sin permiso (`CLAUDE.md` §0).

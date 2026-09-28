@@ -18,7 +18,7 @@ load_checkpoint(path) -> tuple[Network, Optimizer | None, dict]
 - `load_checkpoint` reconstruye una red **entrenable** (no solo para predecir).
 
 ### `experiments/config.py`
-- `load_config(path) -> dict`: JSON → defaults (`03-arquitectura.md` §4) → **validación** con errores legibles: clave desconocida, tipo inválido, `softmax` sin `categorical_crossentropy`, `test_path`/`holdout_test` evaluado sin `--final-eval`, `layers[-1]` incompatible con el target.
+- `load_config(path) -> dict`: JSON → defaults (`03-arquitectura.md` §4, más `dataset.format`: `"tabular"` | `"digits"`) → **validación** con errores legibles: clave desconocida, tipo inválido, `softmax` sin `categorical_crossentropy`, `test_path`/`holdout_test` evaluado sin `--final-eval`, `layers[-1]` incompatible con el target.
 - `expand(config) -> list[dict]`: producto cartesiano de `sweep` (notación punto) × `seeds` [× folds si `split.kind == "kfold"`].
 - `config_hash(config) -> str`: sha1 de la config resuelta **sin** semilla ni fold, 8 caracteres.
 - `build(config, rng) -> (network, optimizer, loss, callbacks, metrics, augment)` usando los registros `get_activation`, `get_loss`, `get_optimizer`, `get_metric`, `get_augmentation`.
@@ -30,7 +30,7 @@ python -m experiments.runner <config.json> [--smoke] [--resume <run_dir>] [--fin
 ```
 Por cada corrida de `expand(config)`:
 1. Si `results/<run_name>/<hash8>_s<seed>[_f<k>]/metrics.json` existe y no hay `--force` → saltear.
-2. Cargar datos (`load_csv` o `synthetic`), aplicar `holdout_test` (excluir esos índices), split → `prepare_fold`.
+2. Cargar datos según `dataset.format` (clave nueva, default `"tabular"` → `load_csv`; `"digits"` → `load_digits_csv`; o `dataset.synthetic`), aplicar `holdout_test` (excluir esos índices), split → `prepare_fold`.
 3. `rng = np.random.default_rng(seed)`; construir todo con `build`.
 4. `fit` con `PrintProgress` (o `tqdm` si se agrega a `requirements.txt`), checkpoint cada `logging.checkpoint_every` épocas vía un callback `Checkpoint`.
 5. Guardar `config.json`, `history.csv` (vía `History.to_csv`), `metrics.json` (métricas finales train/val con `classification_summary`, `best_epoch`, tiempo total, s/época, `n_params`, commit de git con `git rev-parse --short HEAD` o `"no-git"`, sha256 de los datos, `status`), `predictions.npz` (si `save_predictions`) y `model.npz` (si `save_model`).
