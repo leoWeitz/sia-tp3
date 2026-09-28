@@ -50,18 +50,18 @@ Además:
 
 ## Tests y criterios de aceptación
 Archivos: `tests/test_optimizers.py` (ampliar), `tests/test_training.py` (ampliar), `tests/test_gradients.py` (caso L2), `tests/test_augmentation.py` (nuevo).
-- [ ] **Paso a mano** por optimizador con escalares (p. ej. `g = 0.5`, `η = 0.1`): Momentum 2 pasos (verifica el término `α·Δθ`); RMSProp 1 paso; Adam en `t = 1` da paso ≈ `η·sign(g)` (corrección de sesgo); AdaGrad 1 paso.
-- [ ] Cada optimizador minimiza `½ θᵀ diag(1, 10) θ` desde `(1, 1)` hasta `‖θ‖ < 1e-3` en ≤ 2000 pasos.
-- [ ] Cada optimizador actualiza **in place** los pesos de una `Network` (mismo objeto, como el test de GD).
-- [ ] `state_dict` → nuevo optimizador → `load_state_dict` → la trayectoria sigue idéntica a no haber cortado.
-- [ ] `AdaptiveEta`: con una secuencia sintética de pérdidas (vía un callback falso como `FakeLosses`) sube η en `a` tras `k` bajas, lo baja a `(1-b)η` tras `k'` subas, reinicia contadores, respeta `min_lr`; la columna `lr` del historial refleja los cambios.
-- [ ] Gradient check de `[3, 4, 2]` tanh + MSE **con L2**: el gradiente de `loss.value + net.l2_penalty(l2)` coincide con el analítico; los bias no reciben término L2.
-- [ ] Con `l2` grande, la norma de los pesos entrenados es menor que con `l2 = 0` (misma semilla).
-- [ ] `metrics={"mae": f}` produce `train_mae` y `val_mae` en `history.records` y en el CSV.
-- [ ] Divergencia: `y = x` con `GD(lr=1e6)` termina con `history.status == "diverged"` antes de agotar las épocas y sin excepción.
-- [ ] Augmentation: no altera `X` original; `sigma=0` es identidad; reproducible con la misma semilla; `RandomShift` de una imagen con un solo píxel encendido lo mueve a una posición válida; `evaluate` no aplica augmentation (con `sigma` enorme, `evaluate` da lo mismo que sin augmentation).
-- [ ] XOR `[2,2,1]` con GD, Momentum y Adam (20 semillas, xavier): registrar en el log del test la mediana de épocas hasta resolver de cada uno (sin assertar un orden) → dato para la presentación.
-- [ ] Toda la suite anterior sigue en verde (salvo el test justificado arriba) y `ruff` limpio.
+- [x] **Paso a mano** por optimizador con escalares (p. ej. `g = 0.5`, `η = 0.1`): Momentum 2 pasos (verifica el término `α·Δθ`); RMSProp 1 paso; Adam en `t = 1` da paso ≈ `η·sign(g)` (corrección de sesgo); AdaGrad 1 paso.
+- [x] Cada optimizador minimiza `½ θᵀ diag(1, 10) θ` desde `(1, 1)` hasta `‖θ‖ < 1e-3` en ≤ 2000 pasos.
+- [x] Cada optimizador actualiza **in place** los pesos de una `Network` (mismo objeto, como el test de GD).
+- [x] `state_dict` → nuevo optimizador → `load_state_dict` → la trayectoria sigue idéntica a no haber cortado.
+- [x] `AdaptiveEta`: con una secuencia sintética de pérdidas (vía un callback falso como `FakeLosses`) sube η en `a` tras `k` bajas, lo baja a `(1-b)η` tras `k'` subas, reinicia contadores, respeta `min_lr`; la columna `lr` del historial refleja los cambios.
+- [x] Gradient check de `[3, 4, 2]` tanh + MSE **con L2**: el gradiente de `loss.value + net.l2_penalty(l2)` coincide con el analítico; los bias no reciben término L2.
+- [x] Con `l2` grande, la norma de los pesos entrenados es menor que con `l2 = 0` (misma semilla).
+- [x] `metrics={"mae": f}` produce `train_mae` y `val_mae` en `history.records` y en el CSV.
+- [x] Divergencia: `y = x` con `GD(lr=1e6)` termina con `history.status == "diverged"` antes de agotar las épocas y sin excepción.
+- [x] Augmentation: no altera `X` original; `sigma=0` es identidad; reproducible con la misma semilla; `RandomShift` de una imagen con un solo píxel encendido lo mueve a una posición válida; `evaluate` no aplica augmentation (con `sigma` enorme, `evaluate` da lo mismo que sin augmentation).
+- [x] XOR `[2,2,1]` con GD, Momentum y Adam (20 semillas, xavier): registrar en el log del test la mediana de épocas hasta resolver de cada uno (sin assertar un orden) → dato para la presentación.
+- [x] Toda la suite anterior sigue en verde (salvo el test justificado arriba) y `ruff` limpio.
 
 ## Entregables
 Rama `f04-optimizers` lista para PR, con el `README.md` actualizado (tabla de optimizadores, callbacks y parámetros nuevos de `fit`). El agente propone los mensajes de commit (`feat(F04): ...`) y no commitea sin permiso (`CLAUDE.md` §0).
