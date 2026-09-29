@@ -2,7 +2,8 @@
 
 Cuatro casos con solución conocida: AND con perceptrón escalón, y = x con
 perceptrón lineal, y = tanh(x) con perceptrón no lineal, y XOR con multicapa.
-Más la iteración de backprop hecha a mano de docs/verificacion_manual.md.
+Más las iteraciones de backprop hechas a mano de docs/verificacion_manual.md
+([2, 2, 1]) y docs/verificacion_manual_2321.md ([2, 3, 2, 1]).
 
 Los casos que dependen de la inicialización se corren sobre varias semillas:
 una sola corrida no alcanza para concluir que el motor funciona.
@@ -179,3 +180,66 @@ def test_verificacion_manual_221():
 
     # Paso 4: la pérdida bajó
     assert loss.value(y, net.predict(X)) == pytest.approx(0.004295, abs=1e-6)
+
+
+def test_verificacion_manual_2321():
+    """Reproduce, con el motor, los números a mano de docs/verificacion_manual_2321.md."""
+    net = Network([2, 3, 2, 1], hidden_activation="tanh", output_activation="tanh",
+                  rng=np.random.default_rng(0))  # fmt: skip
+    hidden1, hidden2, output = net.layers
+    hidden1.W = np.array([[0.5, -0.5, 0.25], [0.25, 0.5, -0.5]])
+    hidden1.b = np.array([[0.0, 0.25, -0.25]])
+    hidden2.W = np.array([[0.5, -1.0], [-0.5, 0.5], [1.0, 0.25]])
+    hidden2.b = np.array([[0.1, -0.1]])
+    output.W = np.array([[1.0], [-0.5]])
+    output.b = np.array([[0.2]])
+    X = np.array([[1.0, 1.0]])
+    y = np.array([[-1.0]])
+    loss = MSE()
+
+    # Paso 1: forward
+    y_pred = net.predict(X)
+    np.testing.assert_allclose(hidden1.z, [[0.75, 0.25, -0.5]], atol=1e-6)
+    np.testing.assert_allclose(np.tanh(hidden1.z), [[0.635149, 0.244919, -0.462117]], atol=1e-6)
+    np.testing.assert_allclose(hidden2.z, [[-0.167002, -0.728219]], atol=1e-6)
+    np.testing.assert_allclose(np.tanh(hidden2.z), [[-0.165467, -0.621974]], atol=1e-6)
+    np.testing.assert_allclose(output.z, [[0.345521]], atol=1e-6)
+    np.testing.assert_allclose(y_pred, [[0.332397]], atol=1e-6)
+    assert loss.value(y, y_pred) == pytest.approx(1.775282, abs=1e-6)
+
+    # Paso 2: backward
+    net.backward(y, y_pred, loss)
+    np.testing.assert_allclose(output.grad_W, [[-0.392217], [-1.474308]], atol=1e-6)
+    np.testing.assert_allclose(output.grad_b, [[2.370367]], atol=1e-6)
+    np.testing.assert_allclose(
+        hidden2.grad_W,
+        [[1.464316, -0.461558], [0.564652, -0.177981], [-1.065396, 0.335817]],
+        atol=1e-6,
+    )
+    np.testing.assert_allclose(hidden2.grad_b, [[2.305468, -0.726693]], atol=1e-6)
+    # x₁ = x₂ = 1: las dos filas de grad_W son los deltas de la primera oculta.
+    np.testing.assert_allclose(
+        hidden1.grad_W, [[1.121239, -1.425138, 1.670254], [1.121239, -1.425138, 1.670254]],
+        atol=1e-6,
+    )  # fmt: skip
+    np.testing.assert_allclose(hidden1.grad_b, [[1.121239, -1.425138, 1.670254]], atol=1e-6)
+
+    # Paso 3: actualización con η = 0.1
+    GD(lr=0.1).step(net.params, net.grads)
+    np.testing.assert_allclose(
+        hidden1.W, [[0.387876, -0.357486, 0.082975], [0.137876, 0.642514, -0.667025]],
+        atol=1e-6,
+    )  # fmt: skip
+    np.testing.assert_allclose(hidden1.b, [[-0.112124, 0.392514, -0.417025]], atol=1e-6)
+    np.testing.assert_allclose(
+        hidden2.W, [[0.353568, -0.953844], [-0.556465, 0.517798], [1.106540, 0.216418]],
+        atol=1e-6,
+    )  # fmt: skip
+    np.testing.assert_allclose(hidden2.b, [[-0.130547, -0.027331]], atol=1e-6)
+    np.testing.assert_allclose(output.W, [[1.039222], [-0.352569]], atol=1e-6)
+    np.testing.assert_allclose(output.b, [[-0.037037]], atol=1e-6)
+
+    # Paso 4: la pérdida bajó
+    y_after = net.predict(X)
+    np.testing.assert_allclose(y_after, [[-0.665015]], atol=1e-6)
+    assert loss.value(y, y_after) == pytest.approx(0.112215, abs=1e-6)
