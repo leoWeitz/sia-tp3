@@ -18,6 +18,55 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 
 ---
 
+## Cómo correr un experimento
+
+Un experimento es un JSON en `experiments/configs/` (contrato completo, con cada clave y su default, en `docs/03-arquitectura.md` §4). Un JSON mínimo alcanza:
+
+```json
+{
+  "run_name": "ej2_lr",
+  "seeds": [0, 1, 2],
+  "dataset": {"format": "digits", "path": "datasets/digits.csv", "normalize": "none",
+              "target_encoding": "onehot", "split": {"kind": "holdout", "ratio": 0.8}},
+  "model": {"layers": [784, 64, 10], "output_activation": "sigmoid"},
+  "training": {"optimizer": {"kind": "adam", "lr": 0.001}, "batch_size": 32, "epochs": 300,
+               "early_stopping": {"patience": 20}},
+  "metrics": ["accuracy", "macro_f1"],
+  "sweep": {"training.optimizer.lr": [0.0001, 0.001, 0.01]}
+}
+```
+
+Una clave desconocida, un tipo inválido o una combinación incompatible (softmax sin entropía cruzada, `test_path` sin `--final-eval`, capas que no coinciden con los datos, ...) es un error que nombra la clave, antes de entrenar nada.
+
+```bash
+# 1. Probar la config y estimar el tiempo: 1 corrida, 5 épocas, ≤ 500 muestras, en results/_smoke/
+python -m experiments.runner experiments/configs/ej2/lr.json --smoke
+
+# 2. Barrido completo: una corrida por combinación del sweep × semilla [× fold]
+python -m experiments.runner experiments/configs/ej2/lr.json [--workers 4]
+python -m experiments.runner experiments/configs/ej2/lr.json --only training.optimizer.lr=0.001 --only seed=0
+
+# 3. Resumen por configuración (media, desvío, min, max entre semillas)
+python -m analysis.aggregate results/ej2_lr          # → results/ej2_lr/summary.csv
+
+# Si una corrida se cortó: sigue desde su checkpoint.npz
+python -m experiments.runner --resume results/ej2_lr/<hash8>_s<seed>
+
+# 4. Una sola vez, con la config elegida: evaluación en test
+python -m experiments.runner experiments/configs/ej2/final.json --final-eval
+```
+
+- **Salida:** `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` con `config.json` (la config resuelta), `history.csv`, `metrics.json`, `predictions.npz` y `model.npz` (`CLAUDE.md` §7). `hash8` depende de la config sin la semilla, así que las semillas de una misma config quedan agrupadas.
+- **Relanzar** un barrido saltea las corridas que ya tienen `metrics.json`: agregar semillas o valores al sweep solo corre lo nuevo. `--force` las rehace.
+- **Progreso:** cada corrida imprime los logs cada `logging.every` épocas; `results/<run_name>/log.txt` registra cada corrida (`[i/N]`, estado, duración, tiempo restante estimado). Si una corrida diverge queda con `status: "diverged"` y si falla, con `error.txt`; en los dos casos el barrido sigue.
+- **Reanudar** (`--resume`) da exactamente el mismo resultado que no haber cortado, salvo con data augmentation (el ruido de las épocas reanudadas es otro; ver `docs/03-arquitectura.md` §3).
+- **Test sagrado:** `dataset.holdout_test` saca del desarrollo un test fijo (índices guardados en `indices_path`) y `dataset.test_path` solo se acepta con `--final-eval`. `--final-eval` necesita `selected_from` (la corrida o el prefijo `results/<run_name>/<hash8>` elegido en validación), reentrena con todo el desarrollo durante la mediana de `best_epoch` (o reusa los modelos, con `"final": {"mode": "reuse"}`), evalúa **una vez** y escribe `results/<run_name>/final_eval.json`; si ya existe, se niega.
+- **Validación del motor:** `experiments/configs/validacion/` (AND con escalón, `y = x`, `y = tanh(x)`, XOR `[2, 2, 1]` y `[2, 3, 2, 1]`, 20 semillas cada una).
+
+Desde Python: `run_experiment(path, ...)`, `resume_run(run_dir)` y `final_eval(path)` en `experiments/runner.py`; `load_runs`, `load_histories`, `aggregate`, `apply_style` y `save_figure` en `analysis/common.py`.
+
+---
+
 ## Estado del motor
 
 | Etapa | Qué | Estado |
@@ -29,7 +78,9 @@ Convenciones y reglas del proyecto: ver `CLAUDE.md`. Plan por etapas: ver `docs/
 | 4 | `fit`, mini-batch, `History` y callbacks | ✅ |
 | 5 | Ejercicio previo de validación: AND, `y = x`, `y = tanh(x)`, XOR y verificación manual | ✅ (falta rehacer la verificación manual en papel) |
 | F04 | Momentum, RMSProp, Adam, AdaGrad, η adaptativo, L2, augmentation, varias métricas, columna `lr`, divergencia, logística con 2β | ✅ |
-| F05 en adelante | Datos, métricas, runner, análisis (ver `docs/README.md`) | pendiente |
+| F05–F06 | Datos (loaders, normalización, splits) y métricas/umbral | ✅ |
+| F07 | Runner, configs, guardado/carga/reanudación, agregación (ver "Cómo correr un experimento") | ✅ |
+| F08 en adelante | Validación, ejercicios, análisis (ver `docs/README.md`) | pendiente |
 
 ### Qué hay en `core/`
 
@@ -184,6 +235,8 @@ history = fit_perceptron(net, X, y, lr=0.1, epochs=100)  # y: (n_muestras, 1) co
 
 Uso desde la config: `get_augmentation({"kind": "gaussian_noise", "sigma": 0.05, "clip": [0, 1]})`; una lista de dicts arma un `Compose`.
 
+**`serialization.py`** (F07) — `save_checkpoint(path, network, optimizer=None, extra=None)` guarda en un `.npz` (sin pickle) los pesos, la arquitectura (tamaños, activaciones con su β, inicializador), el estado del optimizador, el estado del rng de la red y `extra` (dicts, listas, escalares y arrays). `load_checkpoint(path)` devuelve `(network, optimizer, extra)` listos para **seguir entrenando**: mismo orden de lotes y mismo estado del optimizador que si no se hubiera cortado. El callback `Checkpoint(path, every, optimizer, extra)` guarda uno cada `every` épocas. Para reanudar, `EarlyStopping` y `AdaptiveEta` tienen `state_dict()` / `load_state_dict(state)`, que se aplica **después** de `on_train_begin` (que reinicia el estado).
+
 ### Qué verifican los tests
 
 - `test_activations.py`: cada derivada analítica contra la numérica `(f(z+ε) − f(z−ε)) / 2ε`, con ε = 1e-5 y tolerancia 1e-7, sobre valores negativos, cero y grandes. Estabilidad de `Sigmoid` y `Softmax`, y que `Sigmoid(beta)` sea la logística de la cátedra: `½ (1 + tanh(beta·z))`.
@@ -235,6 +288,9 @@ Uso desde la config: `get_augmentation({"kind": "gaussian_noise", "sigma": 0.05,
   - que el perceptrón escalón **no** pueda con XOR: nunca baja del 25% de error, porque XOR no es linealmente separable;
   - un paso de la regla del perceptrón calculado a mano;
   - que el motor reproduzca exactamente los números de `docs/verificacion_manual.md`.
+- `test_serialization.py` (F07): guardar y cargar da las mismas predicciones, activaciones con su β e inicializador; el optimizador conserva su estado; cortar, guardar, cargar y seguir entrenando da los mismos pesos que no cortar (GD y Adam, con mini-batch); `extra` con arrays anidados, `inf`, `NaN` y enteros de 128 bits; el callback `Checkpoint`; y que `EarlyStopping` y `AdaptiveEta` sigan igual tras `state_dict` → `load_state_dict`.
+- `test_experiments.py` (F07): defaults de una config mínima; 19 casos de validación, cuyo mensaje nombra la clave; `expand` (2 claves × 3 valores × 2 semillas = 18 corridas, mismo hash entre semillas, k-fold, sweep de una sección entera); `build`; la corrida end-to-end de XOR con todos los archivos de `CLAUDE.md` §7; **resume idéntico** (corte simulado en la época 6 de 10 con checkpoint en la 5, GD y Adam, con mini-batch, early stopping y η adaptativo: pesos, optimizador e historial iguales con `atol=1e-12`); relanzar sin reentrenar; `--only`; divergencia y errores que no frenan el barrido; `--workers 2` igual que secuencial; trainer `perceptron`; formato `digits`; `--smoke` (5 épocas, 500 muestras, estimación); `holdout_test` que nunca entra al desarrollo; `--final-eval` (reentrenar y reusar, una sola vez); el CLI; y que las 5 configs de `validacion/` corran con `--smoke` en menos de 60 s.
+- `test_analysis.py` (F07): `aggregate` (media, desvío con ddof = 1, min, max, n) en un caso sintético; `load_runs`, `load_histories` y `summary.csv` sobre un barrido real; el estilo (fuente ≥ 14 pt, paleta fija) y que `save_figure` escriba PNG y PDF.
 
 ---
 

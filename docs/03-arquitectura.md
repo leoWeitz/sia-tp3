@@ -11,7 +11,7 @@ Ver `CLAUDE.md` §4 (árbol completo con el estado de cada módulo). Archivos qu
 | F04 | `core/optimizers.py`, `core/callbacks.py`, `core/network.py`, `core/history.py`, `core/augmentation.py`, `core/activations.py` |
 | F05 | `data/loaders.py`, `data/preprocess.py`, `data/splits.py`, `data/synthetic.py` |
 | F06 | `core/metrics.py`, `core/thresholds.py` |
-| F07 | `core/serialization.py`, `experiments/config.py`, `experiments/runner.py`, `analysis/common.py`, `analysis/aggregate.py`, `experiments/configs/validacion/` |
+| F07 | `core/serialization.py`, `experiments/config.py`, `experiments/runner.py`, `analysis/common.py`, `analysis/aggregate.py`, `experiments/configs/validacion/`; extensiones: `core/callbacks.py` (`state_dict`), `core/network.py` (atributo `initializer`), `data/splits.py` (`prepare_fold` sin validación) |
 | F09–F11 | `notebooks/`, `experiments/configs/ej1/`, `analysis/ej1_*.py`, `docs/datos/fraud_dataset.md`, `docs/resultados/ej1.md` |
 | F12–F13 | `notebooks/`, `experiments/configs/ej2/`, `experiments/configs/ej3/`, `analysis/ej2*.py`, `analysis/ej3.py`, `docs/datos/digits.md`, `docs/resultados/ej2.md`, `docs/resultados/ej3.md` |
 | F14 | `analysis/plots.py`, `analysis/figures.py`, `figures/` |
@@ -136,19 +136,47 @@ roc_curve · pr_curve · auc_trapezoid · average_precision · select_threshold(
 ### F07
 ```python
 # core/serialization.py
-save_checkpoint(path, network, optimizer=None, extra: dict | None = None)   # npz + json embebido
+save_checkpoint(path, network, optimizer=None, extra: dict | None = None)   # npz sin pickle + JSON embebido
 load_checkpoint(path) -> (network, optimizer | None, extra)                 # permite seguir entrenando
+Checkpoint(path, every, optimizer=None, extra=None)   # callback: save_checkpoint cada `every` épocas
+# extra admite dicts, listas, escalares y ndarrays (van como arrays aparte); el estado
+# del rng de la red (rng.bit_generator.state) se guarda siempre.
+
+# core/callbacks.py — métodos nuevos para reanudar (se aplican DESPUÉS de on_train_begin)
+EarlyStopping.state_dict() / .load_state_dict(state)   # best, best_epoch, stopped_epoch, wait, best_params
+AdaptiveEta.state_dict() / .load_state_dict(state)     # valor anterior y contadores (el η vive en el optimizador)
+
+# core/network.py — atributo nuevo
+Network.initializer   # el inicializador usado, para serializar la red
 
 # experiments/config.py
-load_config(path) -> dict (defaults resueltos + validación) · expand(config) -> list[dict] (sweep × seeds [× folds])
-config_hash(config_sin_seed) -> str (8 hex)
+load_config(path, *, final_eval=False) -> dict   # defaults + validación (ConfigError nombra la clave)
+resolve_config(dict, *, final_eval=False) · load_run_config(run_dir/config.json)
+expand(config) -> list[dict]      # sweep × seeds [× folds]; cada corrida tiene seed y fold
+config_hash(config) -> str        # sha1, 8 hex, sin run_name, seed(s), fold, sweep ni logging
+run_id(config) -> "<hash8>_s<seed>[_f<fold>]"
+build(config, rng, *, n_features=None, n_outputs=None, task=None, threshold=None)
+    -> (network, optimizer | None, loss, callbacks, metrics, augment)
 
 # experiments/runner.py (CLI)
-python -m experiments.runner <config.json> [--smoke] [--resume <run_dir>] [--final-eval] [--force] [--workers N]
+python -m experiments.runner <config.json> [--smoke] [--force] [--only CLAVE=VALOR]... [--workers N]
+                                           [--results-dir DIR]
+python -m experiments.runner --resume <run_dir>
+python -m experiments.runner <config.json> --final-eval [--force]
+run_experiment(path, ...) · train_run(config, run_dir, ...) · resume_run(run_dir) · final_eval(path, ...)
 
 # analysis/common.py · analysis/aggregate.py
-load_runs(results_dir) -> DataFrame · load_histories(results_dir) -> DataFrame (largo) · aggregate(df, by)
+load_runs(results_dir) -> DataFrame · load_histories(results_dir) -> DataFrame (largo)
+aggregate(df, by, metrics=None) -> DataFrame (n, media, desvío ddof=1, min, max)
+apply_style() · save_figure(fig, path) -> [png 200 dpi, pdf] · PALETTE
+python -m analysis.aggregate results/<run_name>   # → summary.csv
 ```
+
+Detalles del runner (F07):
+- **Datos:** se excluyen los índices de `holdout_test`; el resto se particiona con un generador propio, `default_rng([split.seed o seed, 1])`, así que cambiar el modelo no cambia la partición. El modelo usa `default_rng(seed)`, que decide los pesos iniciales y el orden de los lotes.
+- **Tarea** (`dataset.task: "auto"`): multiclass con one-hot, binary si el target tiene 2 valores y regression en otro caso. El umbral binario es el punto medio de los dos valores del target codificado: 0 con ±1 (tanh) y 0.5 con 0/1 (sigmoide).
+- **Reanudar:** el checkpoint guarda pesos, optimizador, rng de la red, estado de los callbacks, época, tiempo e historial. Reanudar sin augmentation da exactamente lo mismo que no cortar. Con augmentation no: `fit` crea en cada llamada un generador hijo (`rng.spawn`) cuyo estado no se guarda.
+- **Split `none`:** sin validación (Ej1, R-01). `predictions.npz` guarda entonces las predicciones de train (`subset = "train"`).
 
 ## 4. Contrato de configuración (JSON)
 
@@ -156,29 +184,44 @@ Base en `CLAUDE.md` §6. Claves completas y defaults (los define `experiments/co
 
 | Clave | Default | Notas |
 |---|---|---|
-| `run_name` | obligatorio | carpeta en `results/` |
-| `seed` / `seeds` | `[0, 1, 2]` | `seed` suelto = `[seed]` |
-| `dataset.path` | — | o `dataset.synthetic: {"name": "and"\|"xor"\|"line", ...}` para validación |
-| `dataset.target`, `features`, `drop`, `categorical`, `na_policy` | —, todas, `[]`, `[]`, `"error"` | nombres exactos en `docs/datos/*.md` |
-| `dataset.normalize` | `"minmax"` | `none`, `minmax`, `zscore`, `unit_length`; `feature_range` |
-| `dataset.target_encoding` | `"none"` | `onehot`, `pm1_onehot` (−1/+1 para tanh), `scale_to_output` |
-| `dataset.split` | `{"kind": "holdout", "ratio": 0.8, "stratified": true}` | `none`, `holdout`, `kfold` (`k`) |
-| `dataset.holdout_test` | `null` | Ej1: `{"ratio": 0.2, "seed": 1234, "indices_path": "results/ej1_split/test_idx.npy"}`; desarrollo **excluye** esos índices |
-| `dataset.test_path` | `null` | solo con `--final-eval` (+ `selected_from`) |
-| `model.layers`, `hidden_activation`, `output_activation`, `beta`, `initializer` (+ `init_params`) | — , `tanh`, `identity`, `1.0`, `xavier` | `layers[0]` se puede poner `"auto"` = nº de features |
-| `training.loss` | `"mse"` | |
-| `training.optimizer` | `{"kind": "gd", "lr": 0.01}` | + parámetros propios de cada optimizador |
+| `run_name` | obligatorio | carpeta en `results/`; letras, números, `_`, `.`, `-` |
+| `seed` / `seeds` | `[0, 1, 2]` | `seed` suelto = `[seed]`; no las dos |
+| `trainer` | `"backprop"` | `"perceptron"`: llama a `fit_perceptron` con `training.optimizer.lr` (solo `{"kind": "gd", "lr": η}`), para `layers [n, 1]` con salida `step` |
+| `dataset.name` | `null` | etiqueta descriptiva (no cambia nada) |
+| `dataset.path` | — | o `dataset.synthetic` (uno solo) |
+| `dataset.synthetic` | `null` | `{"name": "and"}`, `{"name": "xor"}` o `{"name": "line", "function": "identity"\|"tanh", "n": 50, "low": -1.0, "high": 1.0, "seed": 0}` |
+| `dataset.format` | `"tabular"` | `"tabular"` → `load_csv`; `"digits"` → `load_digits_csv` (784 features, target `label`) |
+| `dataset.target`, `features`, `drop`, `categorical`, `na_policy` | —, todas, `[]`, `[]`, `"error"` | solo `tabular`; nombres exactos en `docs/datos/*.md` |
+| `dataset.task` | `"auto"` | `binary`, `multiclass`, `regression`; `auto`: multiclass con one-hot, binary si el target tiene 2 valores, si no regression |
+| `dataset.n_classes` | `null` | solo con one-hot; `null` = máx. etiqueta + 1 (en `digits`, 10) |
+| `dataset.normalize` | `"minmax"` | `none`, `minmax`, `zscore`, `unit_length` |
+| `dataset.feature_range` | `null` (= `[0, 1]`) | solo con `minmax` |
+| `dataset.target_encoding` | `"none"` | `onehot`, `pm1_onehot` (−1/+1 para tanh), `scale_to_output` (salida tanh o sigmoid) |
+| `dataset.target_in_range` | `null` | solo con `scale_to_output`: rango fijo de ζ (p. ej. `[0, 1]` para probabilidades) |
+| `dataset.split` | `{"kind": "holdout", "ratio": 0.8, "stratified": true, "seed": null}` | `none` (sin validación), `holdout` (`ratio` = fracción de train), `kfold` (`k`: 5, `stratified`, `seed`). `seed: null` = semilla de la corrida; un entero fija la partición entre semillas. Target continuo: se estratifica por cuantiles |
+| `dataset.holdout_test` | `null` | `{"ratio": 0.2, "seed": 0, "stratified": true, "indices_path": null}`; desarrollo **excluye** esos índices. Con `indices_path` se generan una vez y se reusan (Ej1: `"results/ej1_split/test_idx.npy"`). Solo se evalúa con `--final-eval` |
+| `dataset.test_path` | `null` | solo con `--final-eval` (+ `selected_from`); mismo `format` que `path` |
+| `model.layers`, `hidden_activation`, `output_activation`, `beta`, `initializer` (+ `init_params`) | — , `tanh`, `identity`, `1.0`, `xavier`, `{}` | `layers[0]` se puede poner `"auto"` = nº de features; `beta` va a toda capa tanh/sigmoid; `init_params` p. ej. `{"low": -0.1, "high": 0.1}` |
+| `training.loss` | `"mse"` | `softmax` exige `categorical_crossentropy` (y one-hot); `binary_crossentropy` exige `sigmoid` |
+| `training.optimizer` | `{"kind": "gd", "lr": 0.01}` | + parámetros propios de cada optimizador; sin `lr`, el default de la clase (`0.001` en `rmsprop` y `adam`) |
 | `training.batch_size` | `null` (lote completo) | `1` = online |
-| `training.epochs`, `l2`, `augmentation` | —, `0.0`, `null` | |
-| `training.early_stopping`, `adaptive_eta` | `null` | |
+| `training.epochs`, `l2`, `augmentation` | —, `0.0`, `null` | `augmentation`: dict o lista de dicts de `get_augmentation`; `random_shift` en `digits` completa `image_shape: [28, 28]` |
+| `training.early_stopping`, `adaptive_eta` | `null` | kwargs de `EarlyStopping` / `AdaptiveEta` (sin `optimizer`), con sus defaults; `monitor` tiene que estar en los logs y `mode` coincidir (`val_accuracy` → `max`) |
 | `metrics` | `[]` | nombres de `get_metric`; `task` se infiere del dataset |
-| `logging.every`, `save_model`, `save_predictions` | `10`, `true`, `false` | |
-| `sweep` | `{}` | producto cartesiano, claves con notación punto |
-| `selected_from` | `null` | solo `--final-eval`: ruta del run elegido |
+| `logging.every`, `save_model`, `save_predictions`, `checkpoint_every` | `10`, `true`, `false`, `50` | `checkpoint_every`: épocas entre checkpoints (`0` o `null` = ninguno) |
+| `sweep` | `{}` | producto cartesiano, claves con notación punto (una sección entera también, p. ej. `training.optimizer`); no se pueden barrer `run_name`, `seed(s)` ni `logging.*` |
+| `selected_from` | `null` | solo `--final-eval`: carpeta de una corrida o prefijo `results/<run_name>/<hash8>` (todas sus semillas/folds) |
+| `final` | `null` | solo `--final-eval`: `{"mode": "retrain"\|"reuse", "epochs": null, "threshold": null}`. `retrain`: reentrena con todo desarrollo durante `epochs` o la mediana de `best_epoch` de `selected_from`, una vez por semilla; `reuse`: usa sus `model.npz`. `threshold` reemplaza al umbral binario |
 
 ## 5. Contrato de resultados
 
 `CLAUDE.md` §7: `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` con `config.json`, `history.csv`, `metrics.json`, `predictions.npz`, `model.npz`. Además:
-- `results/<run_name>/summary.csv` (generado por `analysis.aggregate`): una fila por `hash8` con media, desvío, min, max y `n` de cada métrica final + las claves del sweep.
-- `results/<run_name>/final_eval.json` (solo `--final-eval`): métricas en test, matriz de confusión, `selected_from`.
+- `metrics.json`: `run_id`, `hash`, `seed`, `fold`, `status` (`ok`/`diverged`), `task`, `threshold`, `n_classes`, `epochs`, `epochs_trained`, `best_epoch` (el de `EarlyStopping`; sin él, la época de menor `val_loss` o la última), `stopped_epoch`, `time_total_s`, `s_per_epoch`, `n_params`, `lr_final`, `resumed_from_epoch`, `smoke`, `git_commit` (con `-dirty` si hay cambios sin commitear en el código), versiones, `data` (sha256, filas de train/val/test excluidas) y `train`/`val`: `loss`, las métricas pedidas y `classification_summary` (clasificación) o `mse`, `rmse`, `mae` (regresión). Se escribe último: una corrida con `metrics.json` está completa.
+- `predictions.npz`: `y_true` (target codificado), `y_score`, `idx` (filas del dataset), `subset` (`val`, o `train` sin validación) y, en clasificación, `labels_true`/`labels_pred`.
+- `model.npz`: `save_checkpoint` con `extra = {config, epoch, preprocessing}`; `preprocessing` tiene el scaler ajustado, la codificación del target, la tarea y el umbral, así el modelo se aplica solo a datos crudos nuevos.
+- `checkpoint.npz`: mientras entrena, cada `logging.checkpoint_every` épocas; se borra al terminar. `error.txt` si la corrida falló (el barrido sigue).
+- `results/<run_name>/log.txt`: inicio y fin de cada lanzamiento, cada corrida `[i/N]` con su estado, duración y tiempo restante estimado, y cada lectura del test.
+- `results/<run_name>/summary.csv` (generado por `analysis.aggregate`): una fila por `hash8` con las claves del sweep, `n`, `n_ok`, `n_diverged` y media, desvío, min y max de cada métrica final (`train.*`, `val.*`, `best_epoch`, `epochs_trained`, `time_total_s`, `s_per_epoch`, `n_params`).
+- `results/<run_name>/final_eval.json` (solo `--final-eval`): métricas en test de cada modelo (con matriz de confusión), media y desvío entre modelos, `selected_from`, corridas elegidas, épocas, origen y sha256 del test. Si ya existe, `--final-eval` se niega (salvo `--force`): el test se evalúa una sola vez. Los modelos reentrenados quedan en `final_s<seed>/`; las predicciones en test, en `test_predictions.npz`.
+- `results/_smoke/<run_name>/`: corridas de `--smoke` (siempre se rehacen).
 - Relanzar un barrido **saltea** runs completos (tienen `metrics.json`); `--force` los rehace.

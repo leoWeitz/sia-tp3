@@ -80,7 +80,7 @@ sia_tp3/
     callbacks.py        # PrintProgress, EarlyStopping (+ AdaptiveEta en F04)                ✅/F04
     optimizers.py       # GD ✅ · Momentum, RMSProp, Adam, AdaGrad                            F04
     augmentation.py     # ruido gaussiano, traslaciones                                      F04
-    serialization.py    # save/load de red + optimizador (reanudar)                          F07
+    serialization.py    # save/load de red + optimizador (reanudar)                          ✅
     metrics.py          # accuracy, precision, recall, f1, matriz de confusión, mse, mae     ✅
     thresholds.py       # barrido de umbral, ROC, PR, AUC, selección de umbral               ✅
   data/
@@ -89,12 +89,12 @@ sia_tp3/
     splits.py           # holdout, k-fold, estratificado, prepare_fold                       ✅
     synthetic.py        # AND, XOR, muestras de funciones (validación)                       ✅
   experiments/
-    config.py           # defaults, validación, sweeps, hash de config                       F07
-    runner.py           # config JSON -> entrenamiento -> results/                           F07
+    config.py           # defaults, validación, sweeps, hash de config                       ✅
+    runner.py           # config JSON -> entrenamiento -> results/                           ✅
     configs/            # un JSON por experimento, versionado en git (subcarpetas por ej.)
   analysis/
-    common.py           # carga de runs, agregación por semillas, estilo de gráficos         F07
-    aggregate.py        # results/<exp>/summary.csv                                          F07
+    common.py           # carga de runs, agregación por semillas, estilo de gráficos         ✅
+    aggregate.py        # results/<exp>/summary.csv                                          ✅
     plots.py, ej1_*.py, ej2.py, ej3.py, figures.py (regenera todo figures/)                   F10–F14
   notebooks/            # SOLO exploración de datos (EDA)
   tests/
@@ -202,7 +202,7 @@ Cada corrida escribe `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` (`hash8` = 
 | F04 | Optimizadores (Momentum, RMSProp, Adam), η adaptativo, L2, augmentation, extensiones de `fit` | ⏳ |
 | F05 | Datos: loaders, normalización, splits | ✅ |
 | F06 | Métricas y umbrales | ✅ |
-| F07 | Runner, configs, save/load/resume, agregación | ⏳ (depende de F04–F06) |
+| F07 | Runner, configs, save/load/resume, agregación | ✅ |
 | F09–F11 | Ej. 1: EDA, aprendizaje, generalización y umbral | ⏳ |
 | F12–F13 | Ej. 2 y Ej. 3 | ⏳ |
 | F14–F15 | Análisis final y presentación | ⏳ |
