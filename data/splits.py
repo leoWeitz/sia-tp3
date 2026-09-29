@@ -159,6 +159,8 @@ def prepare_fold(
       "scale_to_output" → TargetScaler(out_range, target_in_range) ajustado con train
     n_classes: None = max(y) + 1 sobre todo el dataset (solo define la cantidad
     de columnas, no usa estadísticos de validación).
+    idx_val puede estar vacío (entrenar sin validación, split "none"): X_val e
+    y_val quedan con 0 filas.
     fitted: {"scaler", "target_scaler" (o None), "n_classes" (o None)}; se usa
     para transformar test e invertir predicciones.
     """
@@ -183,13 +185,16 @@ def prepare_fold(
         neg = -1.0 if target_encoding == "pm1_onehot" else 0.0
         y_tr, y_val = one_hot(y_tr_raw, n_classes, neg=neg), one_hot(y_val_raw, n_classes, neg=neg)
     else:
-        y_tr = y_tr_raw.astype(np.float64).reshape(len(idx_train), -1)
-        y_val = y_val_raw.astype(np.float64).reshape(len(idx_val), -1)
+        # Ancho explícito en vez de -1: con idx_val vacío NumPy no puede inferirlo.
+        width = 1 if y.ndim == 1 else int(np.prod(y.shape[1:]))
+        y_tr = y_tr_raw.astype(np.float64).reshape(len(idx_train), width)
+        y_val = y_val_raw.astype(np.float64).reshape(len(idx_val), width)
         if target_encoding == "scale_to_output":
             if out_range is None:
                 raise ValueError("target_encoding='scale_to_output' necesita out_range")
             target_scaler = TargetScaler(out_range, in_range=target_in_range).fit(y_tr)
-            y_tr, y_val = target_scaler.transform(y_tr), target_scaler.transform(y_val)
+            y_tr = target_scaler.transform(y_tr)
+            y_val = target_scaler.transform(y_val) if len(y_val) else y_val
 
     fitted = {
         "scaler": scaler,

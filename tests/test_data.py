@@ -337,6 +337,18 @@ def test_prepare_fold_scale_to_output_ajusta_solo_con_train():
         prepare_fold(ds, tr, va, target_encoding="scale_to_output")
 
 
+@pytest.mark.parametrize("encoding", ["none", "onehot", "pm1_onehot", "scale_to_output"])
+def test_prepare_fold_sin_validacion(encoding):
+    # split "none" (Ej1 con todas las muestras): idx_val vacío.
+    ds = make_dataset(rng().normal(size=(6, 2)), np.array([0, 1, 2, 1, 0, 2]))
+    X_tr, y_tr, X_val, y_val, _ = prepare_fold(
+        ds, np.arange(6), np.array([], dtype=np.int64), normalize="zscore",
+        target_encoding=encoding, out_range=(0.0, 1.0),
+    )  # fmt: skip
+    assert X_tr.shape == (6, 2) and X_val.shape == (0, 2)
+    assert y_val.shape == (0, y_tr.shape[1])
+
+
 def test_prepare_fold_opciones_invalidas():
     ds = make_dataset(np.ones((4, 1)), np.array([0, 1, 0, 1]))
     with pytest.raises(ValueError):
