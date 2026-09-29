@@ -50,15 +50,17 @@ Por cada corrida de `expand(config)`:
 ### Configs de ejemplo
 `experiments/configs/validacion/{and_step,linear_identity,nonlinear_tanh,xor_221,xor_2321}.json` usando `dataset.synthetic`. El escalón usa `"trainer": "perceptron"` para que el runner llame a `fit_perceptron`.
 
-## Tests y criterios de aceptación (`tests/test_experiments.py`, `tests/test_serialization.py`)
-- [ ] `expand` con 2 claves × 3 valores × 2 semillas → 18 configs; mismo hash para distinta semilla.
-- [ ] Validación rechaza: clave desconocida, softmax + mse, `test_path` sin `--final-eval`.
-- [ ] Corrida end-to-end de XOR desde JSON (en `tmp_path`) genera todos los archivos de `CLAUDE.md` §7.
-- [ ] **Resume idéntico:** 10 épocas de corrido ≡ 5 + cortar + `--resume` + 5 (pesos finales iguales, `atol=1e-12`), con GD y con Adam.
-- [ ] `save_checkpoint` → `load_checkpoint` → mismas predicciones y el optimizador conserva su estado.
-- [ ] Relanzar un barrido no re-entrena runs existentes.
-- [ ] `aggregate` calcula media/desvío correctos en un caso sintético.
-- [ ] Todas las configs de `validacion/` corren con `--smoke` en < 60 s.
+## Tests y criterios de aceptación (`tests/test_experiments.py`, `tests/test_serialization.py`, `tests/test_analysis.py`)
+- [x] `expand` con 2 claves × 3 valores × 2 semillas → 18 configs; mismo hash para distinta semilla. (`test_expand_2_claves_x_3_valores_x_2_semillas`)
+- [x] Validación rechaza: clave desconocida, softmax + mse, `test_path` sin `--final-eval`. (`test_validacion_rechaza_con_mensaje_que_nombra_la_clave`, 19 casos)
+- [x] Corrida end-to-end de XOR desde JSON (en `tmp_path`) genera todos los archivos de `CLAUDE.md` §7. (`test_corrida_end_to_end_de_xor_genera_todos_los_archivos`)
+- [x] **Resume idéntico:** 10 épocas de corrido ≡ 5 + cortar + `--resume` + 5 (pesos finales iguales, `atol=1e-12`), con GD y con Adam. (`test_resume_identico_a_no_cortar`: corte simulado en la época 6 de una corrida de 10 con checkpoint en la 5, con mini-batch, early stopping y η adaptativo; también coinciden el estado del optimizador y el historial)
+- [x] `save_checkpoint` → `load_checkpoint` → mismas predicciones y el optimizador conserva su estado. (`tests/test_serialization.py`)
+- [x] Relanzar un barrido no re-entrena runs existentes. (`test_relanzar_un_barrido_no_reentrena`)
+- [x] `aggregate` calcula media/desvío correctos en un caso sintético. (`test_aggregate_media_desvio_min_max_y_n`)
+- [x] Todas las configs de `validacion/` corren con `--smoke` en < 60 s. (`test_configs_de_validacion_corren_con_smoke_en_menos_de_60_s`: ~1 s en total)
+
+Decisiones tomadas al implementar: ver `03-arquitectura.md` §3 (F07) y §4. Reanudar con augmentation no es idéntico bit a bit (el generador hijo de `fit` no se guarda); sin augmentation sí.
 
 ## Entregables
 Rama `f07-runner` lista para PR + sección "Cómo correr un experimento" en el `README.md`. El agente propone los mensajes de commit (`feat(F07): ...`) y no commitea sin permiso (`CLAUDE.md` §0).

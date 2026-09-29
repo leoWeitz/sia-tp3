@@ -1,0 +1,14 @@
+{
+  "run_name": "val_nonlinear_tanh",
+  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "dataset": {
+    "name": "y=tanh(x)",
+    "synthetic": {"name": "line", "function": "tanh", "n": 50, "low": -2.0, "high": 2.0, "seed": 0},
+    "normalize": "none",
+    "split": {"kind": "none"}
+  },
+  "model": {"layers": [1, 1], "output_activation": "tanh", "beta": 1.0},
+  "training": {"optimizer": {"kind": "gd", "lr": 0.5}, "epochs": 200},
+  "metrics": ["mae"],
+  "logging": {"every": 50, "save_predictions": true, "checkpoint_every": 0}
+}

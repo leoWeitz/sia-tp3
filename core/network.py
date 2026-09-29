@@ -55,6 +55,9 @@ class Network:
         hidden = _resolve_activation(hidden_activation)
         output = _resolve_activation(output_activation)
         init = get_initializer(initializer) if isinstance(initializer, str) else initializer
+        # Solo se guarda para serializar la red (core/serialization.py): los
+        # pesos ya se inicializaron y el objeto no se vuelve a usar.
+        self.initializer = init
 
         n_layers = len(self.layer_sizes) - 1
         self.layers = [
