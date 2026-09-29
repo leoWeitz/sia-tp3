@@ -60,16 +60,16 @@ prepare_fold(dataset, idx_train, idx_val, normalize="minmax", target_encoding="n
 ## Tests y criterios de aceptación (`tests/test_data.py`)
 > Los tests **nunca** dependen de `datasets/` (el CI no tiene los CSV): usan archivos sintéticos chicos creados en `tmp_path`. Si se agrega algún test con datos reales, se marca con `pytest.mark.skipif` cuando el archivo no existe.
 
-- [ ] `MinMaxScaler` lleva train exactamente a `[a, b]`; `inverse_transform(transform(X)) ≈ X`; columna constante → `a` con `warnings.warn`.
-- [ ] `StandardScaler`: media ≈ 0 y desvío ≈ 1 en train; desvío 0 → 0.
-- [ ] `UnitLengthScaler`: norma 2 de cada fila = 1; fila nula queda nula.
-- [ ] **Anti-leakage:** con valores extremos solo en validación, los estadísticos de `prepare_fold` no los ven.
-- [ ] `stratified_holdout` y `stratified_kfold`: proporción de clases en cada parte ±1 muestra de la global, incluido un caso 98/2.
-- [ ] `kfold`: folds de validación disjuntos, su unión es todo el dataset; reproducible con la semilla.
-- [ ] `one_hot` con `neg=-1`; forma `(n, k)`.
-- [ ] `load_csv` falla con mensaje claro ante columna inexistente o NaN (con `na_policy="error"`); `categorical` genera las columnas esperadas.
-- [ ] `synthetic`: AND y XOR iguales a los del enunciado (y a los de `tests/test_validation.py`).
-- [ ] `load_digits_csv` sobre un CSV sintético con el mismo formato (3 filas, `image` como texto): `X` de forma `(3, 784)` en [0, 1], `y` enteros, `image_shape == (28, 28)`; la segunda carga usa el caché y da lo mismo; si cambia el CSV, el caché se invalida.
+- [x] `MinMaxScaler` lleva train exactamente a `[a, b]`; `inverse_transform(transform(X)) ≈ X`; columna constante → `a` con `warnings.warn`.
+- [x] `StandardScaler`: media ≈ 0 y desvío ≈ 1 en train; desvío 0 → 0.
+- [x] `UnitLengthScaler`: norma 2 de cada fila = 1; fila nula queda nula.
+- [x] **Anti-leakage:** con valores extremos solo en validación, los estadísticos de `prepare_fold` no los ven.
+- [x] `stratified_holdout` y `stratified_kfold`: proporción de clases en cada parte ±1 muestra de la global, incluido un caso 98/2.
+- [x] `kfold`: folds de validación disjuntos, su unión es todo el dataset; reproducible con la semilla.
+- [x] `one_hot` con `neg=-1`; forma `(n, k)`.
+- [x] `load_csv` falla con mensaje claro ante columna inexistente o NaN (con `na_policy="error"`); `categorical` genera las columnas esperadas.
+- [x] `synthetic`: AND y XOR iguales a los del enunciado (y a los de `tests/test_validation.py`).
+- [x] `load_digits_csv` sobre un CSV sintético con el mismo formato (3 filas, `image` como texto): `X` de forma `(3, 784)` en [0, 1], `y` enteros, `image_shape == (28, 28)`; la segunda carga usa el caché y da lo mismo; si cambia el CSV, el caché se invalida.
 
 ## Entregables
 Rama `f05-datos` lista para PR. El agente propone los mensajes de commit (`feat(F05): ...`) y no commitea sin permiso (`CLAUDE.md` §0).
