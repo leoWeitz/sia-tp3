@@ -90,7 +90,7 @@ El test además verifica que el chequeo **detecte** 4 bugs típicos introducidos
 ### §3.5 Inicialización
 Pesos **aleatorios, nunca todos iguales** (problema de simetría). En el código: `uniform` (default $U(-0.5, 0.5)$), `xavier` (default de `Network`), `he`; bias en 0.
 
-> ⚠️ La escala importa. Con entradas ±1 (XOR), pesos $U(-0.1, 0.1)$ dejan la red en la meseta cercana al origen (salida ≈ 0) y no aprende en miles de épocas; con escala ~1 o Xavier converge en decenas (verificado numéricamente). Con Xavier, `[2,2,1]` resuelve XOR en 17/20 semillas y `[2,3,2,1]` en 20/20 (`tests/test_validation.py`): las 3 fallas son el mínimo local clásico de XOR. Buen material para la slide de validación.
+> ⚠️ La escala importa. Con entradas ±1 (XOR), pesos $U(-0.1, 0.1)$ dejan la red en la meseta cercana al origen (salida ≈ 0, MSE ≈ 1). Con GD η = 0.1 y 2000 épocas (F08-T6, 20 semillas): `[2,3,2,1]` no sale de la meseta (0/20 semillas resuelven) y en `[2,2,1]` la media recién baja de MSE ≈ 1 cerca de la época 900 (14/20). Con $U(\pm 0.5)$, $U(\pm 1)$ o Xavier, `[2,3,2,1]` resuelve 20/20 y `[2,2,1]` 17–18/20: sus fallas son el mínimo local clásico de XOR. Corridas en `results/val_xor_init_uniform`, `results/val_xor_221` y `results/val_xor_2321`; figuras `figures/validacion/V-04_xor_init_*`.
 
 ---
 
@@ -172,4 +172,4 @@ Dado un score $s\in[0,1]$ y umbral $t$: predicción positiva si $s \ge t$.
 
 ## §9 Verificación a mano (V-05)
 
-La iteración oficial es la de `docs/verificacion_manual.md` (red `[2,2,1]` tanh, MSE del código, GD η = 0.1), reproducida exactamente por `tests/test_validation.py::test_verificacion_manual_221`. **Pendiente humano:** rehacerla en papel con calculadora (F08-T3) y, si el equipo quiere, un segundo fixture `[2,3,2,1]` con pesos propios.
+La iteración oficial es la de `docs/verificacion_manual.md` (red `[2,2,1]` tanh, MSE del código, GD η = 0.1), reproducida exactamente por `tests/test_validation.py::test_verificacion_manual_221`. La segunda, con dos capas ocultas, es `docs/verificacion_manual_2321.md` (`[2,3,2,1]`, `test_verificacion_manual_2321`). **Pendiente humano:** rehacerlas en papel con calculadora (F08-T3).
