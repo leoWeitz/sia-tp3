@@ -1,0 +1,27 @@
+{
+  "run_name": "val_xor_init_uniform",
+  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "dataset": {
+    "name": "xor",
+    "synthetic": {"name": "xor"},
+    "normalize": "none",
+    "split": {"kind": "none"}
+  },
+  "model": {
+    "layers": [2, 2, 1],
+    "hidden_activation": "tanh",
+    "output_activation": "tanh",
+    "initializer": "uniform"
+  },
+  "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 2000},
+  "metrics": ["accuracy"],
+  "logging": {"every": 500, "checkpoint_every": 0},
+  "sweep": {
+    "model.layers": [[2, 2, 1], [2, 3, 2, 1]],
+    "model.init_params": [
+      {"low": -0.1, "high": 0.1},
+      {"low": -0.5, "high": 0.5},
+      {"low": -1.0, "high": 1.0}
+    ]
+  }
+}

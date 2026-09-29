@@ -134,7 +134,13 @@ _TRAINING = {
     "early_stopping": None,
     "adaptive_eta": None,
 }
-_LOGGING = {"every": 10, "save_model": True, "save_predictions": False, "checkpoint_every": 50}
+_LOGGING = {
+    "every": 10,
+    "save_model": True,
+    "save_predictions": False,
+    "checkpoint_every": 50,
+    "save_weights_history": False,
+}
 _FINAL = {"mode": "retrain", "epochs": None, "threshold": None}
 
 
@@ -664,6 +670,7 @@ def _resolve(raw: Any, *, final_eval: bool, run: bool) -> dict[str, Any]:
     _check_bool(logging["save_model"], "logging.save_model")
     _check_bool(logging["save_predictions"], "logging.save_predictions")
     _check_int(logging["checkpoint_every"], "logging.checkpoint_every", minimum=0, optional=True)
+    _check_bool(logging["save_weights_history"], "logging.save_weights_history")
     config["sweep"] = _resolve_sweep(config["sweep"], config)
 
     if final_eval:

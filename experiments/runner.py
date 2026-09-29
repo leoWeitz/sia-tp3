@@ -7,7 +7,9 @@
 
 Cada corrida de expand(config) escribe results/<run_name>/<run_id>/ (CLAUDE.md
 §7): config.json, history.csv, metrics.json, predictions.npz (si
-logging.save_predictions) y model.npz (si logging.save_model). Mientras
+logging.save_predictions), model.npz (si logging.save_model) y
+weights_history.npz, los pesos de cada época (si
+logging.save_weights_history; para redes chicas). Mientras
 entrena guarda checkpoint.npz cada logging.checkpoint_every épocas y lo borra
 al terminar. metrics.json se escribe último: una corrida que lo tiene está
 completa y un barrido relanzado la saltea (salvo --force).
@@ -95,6 +97,7 @@ SMOKE_EPOCHS = 5
 SMOKE_MAX_SAMPLES = 500
 SMOKE_DIR = "_smoke"
 CHECKPOINT = "checkpoint.npz"
+WEIGHTS_HISTORY = "weights_history.npz"
 
 # Cada generador de datos sale de [semilla, stream]: así la partición, la
 # submuestra del smoke y el test no comparten números con el modelo, que usa
@@ -498,6 +501,53 @@ class _RunTracker(Callback):
             cb.on_train_end(network)
 
 
+class _WeightsHistory(Callback):
+    """Pesos de la red al final de cada época (logging.save_weights_history).
+
+    Va dentro de _RunTracker, así que recibe épocas absolutas. El primer
+    registro son los pesos con los que arranca el entrenamiento (época
+    start_epoch: 0, o la del checkpoint al reanudar sin historial guardado).
+    state es lo que devolvió arrays() en un checkpoint: al reanudar, el
+    historial sigue desde ahí. Guarda una copia de todos los pesos por época:
+    pensado para redes chicas (AND, XOR, rectas).
+    """
+
+    def __init__(self, start_epoch: int = 0, state: Mapping[str, Any] | None = None) -> None:
+        self.start_epoch = start_epoch
+        self.epochs: list[int] = []
+        self.weights: list[list[tuple[np.ndarray, np.ndarray]]] = []
+        if state is not None:
+            n_layers = sum(key.startswith("W_") for key in state)
+            for i, epoch in enumerate(state["epoch"]):
+                self.epochs.append(int(epoch))
+                self.weights.append(
+                    [
+                        (np.array(state[f"W_{j}"][i]), np.array(state[f"b_{j}"][i]))
+                        for j in range(n_layers)
+                    ]
+                )
+
+    def _record(self, epoch: int, network: Network) -> None:
+        self.epochs.append(epoch)
+        self.weights.append([(layer.W.copy(), layer.b.copy()) for layer in network.layers])
+
+    def on_train_begin(self, network: Network) -> None:
+        if not self.epochs:
+            self._record(self.start_epoch, network)
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network: Network) -> bool:
+        self._record(epoch, network)
+        return False
+
+    def arrays(self) -> dict[str, np.ndarray]:
+        """{"epoch": (n,), "W_<i>": (n, n_in, n_out), "b_<i>": (n, 1, n_out)}; n = registros."""
+        out = {"epoch": np.array(self.epochs, dtype=np.int64)}
+        for j in range(len(self.weights[0])):
+            out[f"W_{j}"] = np.stack([layers[j][0] for layers in self.weights])
+            out[f"b_{j}"] = np.stack([layers[j][1] for layers in self.weights])
+        return out
+
+
 def train_run(
     config: Mapping[str, Any],
     run_dir: str | PathLike,
@@ -531,6 +581,7 @@ def train_run(
 
     checkpoint_path = run_dir / CHECKPOINT
     epoch_offset, time_offset, records, states = 0, 0.0, [], []
+    weights_state = None
     if resume:
         saved_net, saved_opt, extra = load_checkpoint(checkpoint_path)
         for p, saved in zip(network.params, saved_net.params, strict=True):
@@ -541,6 +592,7 @@ def train_run(
         epoch_offset, time_offset = int(extra["epoch"]), float(extra["elapsed_s"])
         records = extra["history"]
         states = list(zip(config_callbacks, extra["callbacks"], strict=True))
+        weights_state = extra.get("weights_history")
     else:
         if run_dir.exists():
             shutil.rmtree(run_dir)
@@ -554,6 +606,11 @@ def train_run(
         records=records,
         states=states,
     )
+    weights = None
+    if logging["save_weights_history"]:
+        # Antes de Checkpoint: el checkpoint de una época ya incluye sus pesos.
+        weights = _WeightsHistory(epoch_offset, weights_state)
+        tracker.callbacks.append(weights)
     if logging["checkpoint_every"]:
 
         def checkpoint_extra(epoch: int, logs: dict[str, float]) -> dict[str, Any]:
@@ -562,6 +619,7 @@ def train_run(
                 "elapsed_s": logs["elapsed_s"],
                 "history": tracker.records,
                 "callbacks": [cb.state_dict() for cb in config_callbacks],
+                "weights_history": None if weights is None else weights.arrays(),
                 "smoke": smoke,
             }
 
@@ -653,6 +711,8 @@ def train_run(
             "preprocessing": _preprocessing_state(config, data),
         }
         save_checkpoint(run_dir / "model.npz", network, optimizer, extra)
+    if weights is not None:
+        np.savez(run_dir / WEIGHTS_HISTORY, **weights.arrays())
 
     metrics_json = {
         "run_id": rid,
