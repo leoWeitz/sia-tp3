@@ -3,10 +3,15 @@
 fit llama a on_train_begin una vez, a on_epoch_end al final de cada época con
 los logs de esa época, y a on_train_end al terminar (por épocas agotadas o por
 corte temprano). Si algún on_epoch_end devuelve True, el entrenamiento se corta.
+
+Los callbacks con estado (EarlyStopping, AdaptiveEta) tienen state_dict y
+load_state_dict para reanudar un entrenamiento cortado. on_train_begin
+reinicia el estado, así que load_state_dict se aplica después de él (el
+runner lo hace con un callback que va último en la lista).
 """
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -74,13 +79,43 @@ class EarlyStopping(Callback):
         self.mode = mode
         self.min_delta = min_delta
         self.restore_best = restore_best
+        self._reset()
 
-    def on_train_begin(self, network: "Network") -> None:
+    def _reset(self) -> None:
         self.best: float = np.inf if self.mode == "min" else -np.inf
         self.best_epoch: int | None = None
         self.stopped_epoch: int | None = None
         self._wait = 0
         self._best_params: list[np.ndarray] | None = None
+
+    def on_train_begin(self, network: "Network") -> None:
+        self._reset()
+
+    def state_dict(self) -> dict[str, Any]:
+        """best, best_epoch, stopped_epoch, épocas sin mejora y copia de los mejores pesos.
+
+        Todo es escalar de Python salvo best_params (lista de arrays o None).
+        """
+        return {
+            "best": float(self.best),
+            "best_epoch": self.best_epoch,
+            "stopped_epoch": self.stopped_epoch,
+            "wait": self._wait,
+            "best_params": (
+                None if self._best_params is None else [p.copy() for p in self._best_params]
+            ),
+        }
+
+    def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        """Restaura lo que guardó state_dict. Va después de on_train_begin, que reinicia."""
+        self.best = float(state["best"])
+        self.best_epoch = None if state["best_epoch"] is None else int(state["best_epoch"])
+        self.stopped_epoch = None if state["stopped_epoch"] is None else int(state["stopped_epoch"])
+        self._wait = int(state["wait"])
+        best_params = state["best_params"]
+        self._best_params = (
+            None if best_params is None else [np.array(p, dtype=float) for p in best_params]
+        )
 
     def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
         if self.monitor not in logs:
@@ -157,11 +192,32 @@ class AdaptiveEta(Callback):
         self.k_prime = k_prime
         self.monitor = monitor
         self.min_lr = min_lr
+        self._reset()
 
-    def on_train_begin(self, network: "Network") -> None:
+    def _reset(self) -> None:
         self._previous: float | None = None
         self._decreases = 0
         self._increases = 0
+
+    def on_train_begin(self, network: "Network") -> None:
+        self._reset()
+
+    def state_dict(self) -> dict[str, Any]:
+        """Valor anterior del monitor y contadores de bajas y subas (escalares de Python).
+
+        El η actual no va acá: vive en optimizer.lr y se guarda con el optimizador.
+        """
+        return {
+            "previous": None if self._previous is None else float(self._previous),
+            "decreases": self._decreases,
+            "increases": self._increases,
+        }
+
+    def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        """Restaura lo que guardó state_dict. Va después de on_train_begin, que reinicia."""
+        self._previous = None if state["previous"] is None else float(state["previous"])
+        self._decreases = int(state["decreases"])
+        self._increases = int(state["increases"])
 
     def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
         if self.monitor not in logs:
