@@ -189,6 +189,7 @@ Cada corrida escribe `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` (`hash8` = 
 
 - Ver sección 0: el agente no commitea ni pushea sin permiso, y nunca figura como co-autor.
 - Se versionan sí o sí: `experiments/configs/`, `results/**/config.json`, `results/**/metrics.json`, `results/**/summary.csv`, `results/**/final_eval.json`, `figures/`, `models/`.
+- **Excepción:** los resultados de validación (`results/val_*/`, F08) no se versionan porque se regeneran en ~1,5 min: correr el runner sobre cada config de `experiments/configs/validacion/` (`python -m experiments.runner experiments/configs/validacion/<config>.json`) y después `python -m analysis.validacion`. Las figuras de `figures/validacion/` sí se versionan.
 - `datasets/*.csv` no se versionan (cada uno los copia del campus).
 
 ---
