@@ -35,7 +35,7 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | F03 | [Multicapa + backprop](fases/F03-mlp.md) | — | ✅ Hecho |
 | F04 | [Optimizadores, regularización y extensiones de `fit`](fases/F04-optimizadores.md) | motor | ✅ Hecho |
 | F05 | [Datos](fases/F05-datos.md) | — (conviene después de F09) | ✅ Hecho |
-| F06 | [Métricas y umbral](fases/F06-metricas.md) | — | ⏳ |
+| F06 | [Métricas y umbral](fases/F06-metricas.md) | — | ✅ Hecho |
 | F07 | [Runner, configs, save/load](fases/F07-infra-experimentos.md) | F04, F05, F06 | ⏳ |
 | F08 | [Validación](fases/F08-validacion.md) | F07 (solo figuras) | ✅ en tests · falta papel y figuras |
 | F09 | [Ej1 · EDA fraude](fases/F09-ej1-eda.md) | — (solo pandas) | ⏳ |

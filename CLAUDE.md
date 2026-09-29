@@ -81,8 +81,8 @@ sia_tp3/
     optimizers.py       # GD ✅ · Momentum, RMSProp, Adam, AdaGrad                            F04
     augmentation.py     # ruido gaussiano, traslaciones                                      F04
     serialization.py    # save/load de red + optimizador (reanudar)                          F07
-    metrics.py          # accuracy, precision, recall, f1, matriz de confusión, mse, mae     F06
-    thresholds.py       # barrido de umbral, ROC, PR, AUC, selección de umbral               F06
+    metrics.py          # accuracy, precision, recall, f1, matriz de confusión, mse, mae     ✅
+    thresholds.py       # barrido de umbral, ROC, PR, AUC, selección de umbral               ✅
   data/
     loaders.py          # lectura de cada CSV del TP                                         ✅
     preprocess.py       # normalización de features, escalado de target, one-hot             ✅
@@ -201,7 +201,7 @@ Cada corrida escribe `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` (`hash8` = 
 | F08 | Validación: AND, y=x, y=tanh(x), XOR, verificación manual | ✅ en tests · falta rehacer la verificación en papel |
 | F04 | Optimizadores (Momentum, RMSProp, Adam), η adaptativo, L2, augmentation, extensiones de `fit` | ⏳ |
 | F05 | Datos: loaders, normalización, splits | ✅ |
-| F06 | Métricas y umbrales | ⏳ |
+| F06 | Métricas y umbrales | ✅ |
 | F07 | Runner, configs, save/load/resume, agregación | ⏳ (depende de F04–F06) |
 | F09–F11 | Ej. 1: EDA, aprendizaje, generalización y umbral | ⏳ |
 | F12–F13 | Ej. 2 y Ej. 3 | ⏳ |

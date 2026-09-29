@@ -46,16 +46,16 @@ select_threshold(sweep_df, criterion: Literal["f1", "f2", "youden", "cost", "pre
 ```
 
 ## Tests y criterios de aceptación
-- [ ] **Ejemplo de la clase** (perros/gatos, 27 animales, matriz `[[11, 4], [2, 10]]`, perro = positivo): accuracy 21/27, precision 11/13, recall 11/15, FPR 2/12 y F1 exactos.
-- [ ] `confusion_matrix` multiclase: suma = n, diagonal = aciertos, orientación filas = real verificada con un caso asimétrico.
-- [ ] Macro-F1 en un caso de 3 clases armado a mano.
-- [ ] Todo predicho negativo → precision `undefined`, sin excepción.
-- [ ] `to_labels`: one-hot 0/1, one-hot ±1, salida sigmoide (umbral 0.5) y tanh (umbral 0).
-- [ ] `get_metric("accuracy", task="multiclass")` funciona como `metric` de `Network.evaluate` sobre una red real chica.
-- [ ] `auc_trapezoid`: scores perfectos → 1.0; invertidos → 0.0; constantes → 0.5; un caso chico a mano.
-- [ ] `threshold_sweep`: en t = 0 recall = 1; en t > max(score) recall = 0.
-- [ ] `select_threshold("cost")` con `cost_fn ≫ cost_fp` elige un umbral ≤ que con costos iguales.
-- [ ] (Opcional) oráculo contra `sklearn.metrics` en datos aleatorios, solo en `tests/`.
+- [x] **Ejemplo de la clase** (perros/gatos, 27 animales, matriz `[[11, 4], [2, 10]]`, perro = positivo): accuracy 21/27, precision 11/13, recall 11/15, FPR 2/12 y F1 exactos.
+- [x] `confusion_matrix` multiclase: suma = n, diagonal = aciertos, orientación filas = real verificada con un caso asimétrico.
+- [x] Macro-F1 en un caso de 3 clases armado a mano.
+- [x] Todo predicho negativo → precision `undefined`, sin excepción.
+- [x] `to_labels`: one-hot 0/1, one-hot ±1, salida sigmoide (umbral 0.5) y tanh (umbral 0).
+- [x] `get_metric("accuracy", task="multiclass")` funciona como `metric` de `Network.evaluate` sobre una red real chica.
+- [x] `auc_trapezoid`: scores perfectos → 1.0; invertidos → 0.0; constantes → 0.5; un caso chico a mano.
+- [x] `threshold_sweep`: en t = 0 recall = 1; en t > max(score) recall = 0.
+- [x] `select_threshold("cost")` con `cost_fn ≫ cost_fp` elige un umbral ≤ que con costos iguales.
+- [x] (Opcional) oráculo contra `sklearn.metrics` en datos aleatorios, solo en `tests/`.
 
 ## Entregables
 Rama `f06-metricas` lista para PR. El agente propone los mensajes de commit (`feat(F06): ...`) y no commitea sin permiso (`CLAUDE.md` §0).
