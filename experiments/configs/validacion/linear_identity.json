@@ -1,0 +1,14 @@
+{
+  "run_name": "val_linear_identity",
+  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "dataset": {
+    "name": "y=x",
+    "synthetic": {"name": "line", "function": "identity", "n": 50, "low": -1.0, "high": 1.0, "seed": 0},
+    "normalize": "none",
+    "split": {"kind": "none"}
+  },
+  "model": {"layers": [1, 1], "output_activation": "identity"},
+  "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 300},
+  "metrics": ["mae"],
+  "logging": {"every": 50, "save_predictions": true, "checkpoint_every": 0}
+}

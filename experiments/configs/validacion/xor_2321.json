@@ -1,0 +1,14 @@
+{
+  "run_name": "val_xor_2321",
+  "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  "dataset": {
+    "name": "xor",
+    "synthetic": {"name": "xor"},
+    "normalize": "none",
+    "split": {"kind": "none"}
+  },
+  "model": {"layers": [2, 3, 2, 1], "hidden_activation": "tanh", "output_activation": "tanh"},
+  "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 2000},
+  "metrics": ["accuracy"],
+  "logging": {"every": 500, "save_predictions": true, "checkpoint_every": 0}
+}
