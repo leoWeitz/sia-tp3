@@ -1,15 +1,15 @@
 {
-  "run_name": "val_and_step",
+  "run_name": "val_xor_step",
   "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
   "trainer": "perceptron",
   "dataset": {
-    "name": "and",
-    "synthetic": {"name": "and"},
+    "name": "xor",
+    "synthetic": {"name": "xor"},
     "normalize": "none",
     "split": {"kind": "none"}
   },
   "model": {"layers": [2, 1], "output_activation": "step", "initializer": "uniform"},
-  "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 100},
+  "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 2000},
   "metrics": ["accuracy"],
-  "logging": {"every": 10, "save_predictions": true, "checkpoint_every": 0, "save_weights_history": true}
+  "logging": {"every": 500, "save_predictions": true, "checkpoint_every": 0}
 }

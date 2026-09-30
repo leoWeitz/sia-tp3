@@ -35,11 +35,11 @@ Fuente: *Enunciado TP3 — Perceptrón Simple y Multicapa (SIA 2026)*. Cada requ
 
 | ID | Qué | Evidencia | Fase |
 |---|---|---|---|
-| V-01 | AND con perceptrón escalón | Converge a error 0; recta de decisión graficada | ✅ tests (F08: papel y figuras) |
-| V-02 | Lineal ajusta 50 muestras de y = x | MSE → ~0, pesos ≈ (1, 0) | ✅ tests (F08: papel y figuras) |
-| V-03 | No lineal ajusta 50 muestras de y = tanh(x) | MSE → ~0 con tanh, β = 1 | ✅ tests (F08: papel y figuras) |
-| V-04 | XOR con MLP [2,2,1] y [2,3,2,1]; comparación con escalón | MLP 100 % accuracy; escalón no converge | ✅ tests (F08: papel y figuras) |
-| V-05 | Cálculo a mano de un paso de backprop | Fixture numérico coincide con el código | ✅ tests (F08: papel y figuras) |
+| V-01 | AND con perceptrón escalón | Converge a error 0; recta de decisión graficada | ✅ tests y figuras (F08) |
+| V-02 | Lineal ajusta 50 muestras de y = x | MSE → ~0, pesos ≈ (1, 0) | ✅ tests y figuras (F08) |
+| V-03 | No lineal ajusta 50 muestras de y = tanh(x) | MSE → ~0 con tanh, β = 1 | ✅ tests y figuras (F08) |
+| V-04 | XOR con MLP [2,2,1] y [2,3,2,1]; comparación con escalón | MLP 100 % accuracy; escalón no converge | ✅ tests y figuras (F08) |
+| V-05 | Cálculo a mano de un paso de backprop | Fixture numérico coincide con el código | ✅ tests `[2,2,1]` y `[2,3,2,1]` (F08) · falta papel |
 
 ### Ejercicio 1 — Fraude (Knowledge Distillation, "TinyModel")
 

@@ -14,6 +14,7 @@ import pytest
 
 from core.augmentation import Compose, GaussianNoise, RandomShift
 from core.callbacks import AdaptiveEta, EarlyStopping
+from core.network import Network
 from core.optimizers import Adam
 from core.serialization import load_checkpoint
 from experiments.config import (
@@ -98,6 +99,7 @@ def test_config_minima_se_completa_con_defaults(tmp_path):
         "save_model": True,
         "save_predictions": False,
         "checkpoint_every": 50,
+        "save_weights_history": False,
     }
 
 
@@ -219,6 +221,10 @@ INVALID = {
     "sweep_con_combinacion_invalida": (
         lambda c: with_key(c, "sweep", {"training.optimizer.lr": [0.1, 0.0]}),
         "lr",
+    ),
+    "historial_de_pesos_no_booleano": (
+        lambda c: with_key(c, "logging.save_weights_history", 1),
+        "logging.save_weights_history",
     ),
 }
 
@@ -669,6 +675,79 @@ def test_trainer_perceptron_aprende_and(tmp_path):
         assert metrics["train"]["accuracy"] == 1.0 and metrics["train"]["loss"] == 0.0
 
 
+# --- Historial de pesos (logging.save_weights_history) ---
+
+
+def and_config(**logging) -> dict:
+    return {
+        "run_name": "and",
+        "seeds": [0],
+        "trainer": "perceptron",
+        "dataset": {"synthetic": {"name": "and"}, "normalize": "none", "split": {"kind": "none"}},
+        "model": {"layers": [2, 1], "output_activation": "step", "initializer": "uniform"},
+        "training": {"optimizer": {"kind": "gd", "lr": 0.1}, "epochs": 8},
+        "logging": logging,
+    }
+
+
+def test_historial_de_pesos_por_epoca_con_trainer_perceptron(tmp_path):
+    config = and_config(save_weights_history=True)
+    run_experiment(write_json(tmp_path / "c.json", config), results_dir=tmp_path, write=print)
+    run_dir = run_dir_of(tmp_path, config)
+
+    with np.load(run_dir / "weights_history.npz") as history:
+        assert sorted(history.files) == ["W_0", "b_0", "epoch"]
+        epochs, W, b = history["epoch"], history["W_0"], history["b_0"]
+    np.testing.assert_array_equal(epochs, np.arange(9))  # época 0 = pesos iniciales
+    assert W.shape == (9, 2, 1) and b.shape == (9, 1, 1)
+
+    # Época 0: los pesos con los que arranca la red de la semilla 0.
+    initial = Network([2, 1], output_activation="step", initializer="uniform",
+                      rng=np.random.default_rng(0))  # fmt: skip
+    np.testing.assert_array_equal(W[0], initial.layers[0].W)
+    np.testing.assert_array_equal(b[0], initial.layers[0].b)
+
+    # Cada época es un paso de lote completo de la regla del perceptrón desde la anterior.
+    X = np.array([[-1.0, 1.0], [1.0, -1.0], [-1.0, -1.0], [1.0, 1.0]])
+    y = np.array([[-1.0], [-1.0], [-1.0], [1.0]])
+    for k in range(8):
+        error = y - np.where(X @ W[k] + b[k] >= 0, 1.0, -1.0)
+        np.testing.assert_allclose(W[k + 1], W[k] + 0.1 * X.T @ error, atol=1e-12)
+        np.testing.assert_allclose(b[k + 1], b[k] + 0.1 * error.sum(), atol=1e-12)
+
+    network, _, _ = load_checkpoint(run_dir / "model.npz")
+    np.testing.assert_array_equal(W[-1], network.layers[0].W)
+
+
+def test_sin_la_opcion_no_hay_historial_de_pesos(tmp_path):
+    config = and_config()
+    run_experiment(write_json(tmp_path / "c.json", config), results_dir=tmp_path, write=print)
+    run_dir = run_dir_of(tmp_path, config)
+    assert (run_dir / "metrics.json").exists()
+    assert not (run_dir / "weights_history.npz").exists()
+
+
+def test_historial_de_pesos_identico_al_reanudar(tmp_path):
+    config = line_config({"kind": "gd", "lr": 0.1})
+    config["logging"]["save_weights_history"] = True
+    path = write_json(tmp_path / "c.json", config)
+    run_experiment(path, results_dir=tmp_path / "a", write=print)
+    straight = run_dir_of(tmp_path / "a", config)
+
+    run = expand(resolve_config(config))[0]
+    cut = tmp_path / "b" / run_id(run)
+    with pytest.raises(KeyboardInterrupt):
+        train_run(run, cut, write=print, callbacks=[CrashAt(6)])
+    resume_run(cut, write=print)
+
+    with np.load(straight / "weights_history.npz") as a, np.load(cut / "weights_history.npz") as b:
+        assert sorted(a.files) == sorted(b.files) == ["W_0", "W_1", "b_0", "b_1", "epoch"]
+        np.testing.assert_array_equal(b["epoch"], np.arange(11))
+        assert a["W_0"].shape == (11, 1, 4) and a["W_1"].shape == (11, 4, 1)
+        for key in a.files:
+            np.testing.assert_allclose(b[key], a[key], rtol=0, atol=1e-12)
+
+
 def test_formato_digits_end_to_end(tmp_path):
     labels = [c for c in range(10) for _ in range(6)]
     config = {
@@ -734,9 +813,17 @@ VALIDATION_CONFIGS = sorted(
 )
 
 
-def test_estan_las_cinco_configs_de_validacion():
+def test_estan_las_configs_de_validacion():
     names = [p.stem for p in VALIDATION_CONFIGS]
-    assert names == ["and_step", "linear_identity", "nonlinear_tanh", "xor_221", "xor_2321"]
+    assert names == [
+        "and_step",
+        "linear_identity",
+        "nonlinear_tanh",
+        "xor_221",
+        "xor_2321",
+        "xor_init_uniform",
+        "xor_step",
+    ]
 
 
 def test_configs_de_validacion_corren_con_smoke_en_menos_de_60_s(tmp_path):

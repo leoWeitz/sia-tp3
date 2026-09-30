@@ -229,3 +229,7 @@ results/**/*
 !results/**/summary.csv
 !results/**/final_eval.json
 !results/.gitkeep
+
+# Resultados de validación (F08): no se versionan porque se regeneran en ~1,5 min
+# (ver CLAUDE.md §8). Las figuras de figures/validacion/ sí se versionan.
+results/val_*/

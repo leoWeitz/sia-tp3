@@ -20,7 +20,8 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | [`03-arquitectura.md`](03-arquitectura.md) | Interfaces reales del motor, extensiones previstas, contratos de config y resultados |
 | [`04-matematica.md`](04-matematica.md) | Fórmulas con la notación de la cátedra y su equivalencia con las convenciones del código |
 | [`PLAN_MOTOR.md`](PLAN_MOTOR.md) | Plan original del motor. Queda como **histórico**: sus Etapas 0–5 están hechas y sus Etapas 6–8 las reemplazan F04–F07 y F14 |
-| [`verificacion_manual.md`](verificacion_manual.md) | Iteración de backprop hecha a mano, reproducida por un test |
+| [`verificacion_manual.md`](verificacion_manual.md) | Iteración de backprop hecha a mano en `[2, 2, 1]`, reproducida por un test |
+| [`verificacion_manual_2321.md`](verificacion_manual_2321.md) | Ídem en `[2, 3, 2, 1]` (dos capas ocultas) |
 | `fases/` | Una spec por fase |
 | `datos/` | Diccionarios de datos y decisiones sobre los datos (se completan en las EDA) |
 | `resultados/` | Respuestas a las preguntas del enunciado (se completan con los experimentos) |
@@ -37,7 +38,7 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | F05 | [Datos](fases/F05-datos.md) | — (conviene después de F09) | ✅ Hecho |
 | F06 | [Métricas y umbral](fases/F06-metricas.md) | — | ✅ Hecho |
 | F07 | [Runner, configs, save/load](fases/F07-infra-experimentos.md) | F04, F05, F06 | ✅ Hecho |
-| F08 | [Validación](fases/F08-validacion.md) | F07 (solo figuras) | ✅ en tests · falta papel y figuras |
+| F08 | [Validación](fases/F08-validacion.md) | F07 (solo figuras) | ✅ Hecho · falta T3 (verificación en papel) |
 | F09 | [Ej1 · EDA fraude](fases/F09-ej1-eda.md) | — (solo pandas) | ⏳ |
 | F10 | [Ej1 · Aprendizaje](fases/F10-ej1-aprendizaje.md) | F07, F09 | ⏳ |
 | F11 | [Ej1 · Generalización y umbral](fases/F11-ej1-generalizacion.md) | F10 | ⏳ |
