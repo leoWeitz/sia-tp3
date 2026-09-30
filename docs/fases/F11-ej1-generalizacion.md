@@ -67,7 +67,7 @@ Si existen etiqueta real **y** probabilidad de BigModel: comparar TinyModel vs B
 - **c)** Mejor modelo (arquitectura, hiperparámetros, métricas en test) + umbral recomendado y su justificación.
 
 ## Criterios de aceptación
-- [ ] TEST generado una sola vez y nunca usado fuera de `ej1_final` (verificable en los logs).
-- [ ] Figuras 1–7 por script.
-- [ ] `docs/resultados/ej1.md` sección B completa.
-- [ ] Criterio de umbral recomendado justificado en `docs/resultados/ej1.md`.
+- [x] TEST generado una sola vez y nunca usado fuera de `ej1_final` (verificable en los logs).
+- [x] Figuras 1–7 por script.
+- [x] `docs/resultados/ej1.md` sección B completa.
+- [x] Criterio de umbral recomendado justificado en `docs/resultados/ej1.md`.
