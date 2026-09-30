@@ -1,0 +1,128 @@
+{
+  "run_name": "ej1_split_strategy",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "dataset": {
+    "name": "fraud_dataset",
+    "path": "datasets/fraud_dataset.csv",
+    "target": "big_model_fraud_probability",
+    "features": [
+      "amount_usd",
+      "quantity_purchased",
+      "session_duration_seconds",
+      "days_since_last_purchase",
+      "account_age_days",
+      "items_viewed_before_purchase"
+    ],
+    "drop": [
+      "flagged_fraud",
+      "timestamp",
+      "device_screen_resolution",
+      "time_since_last_login_s"
+    ],
+    "categorical": [],
+    "task": "regression",
+    "normalize": "zscore",
+    "target_encoding": "none",
+    "split": {
+      "kind": "holdout",
+      "ratio": 0.8,
+      "stratified": true
+    },
+    "holdout_test": {
+      "ratio": 0.2,
+      "seed": 0,
+      "stratified": true,
+      "indices_path": "results/ej1_split/test_idx.npy"
+    }
+  },
+  "model": {
+    "layers": [
+      "auto",
+      1
+    ],
+    "output_activation": "sigmoid",
+    "beta": 1.0
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.003
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "early_stopping": {
+      "patience": 30,
+      "monitor": "val_loss"
+    }
+  },
+  "metrics": [
+    "mse",
+    "mae"
+  ],
+  "logging": {
+    "every": 50,
+    "save_predictions": true,
+    "checkpoint_every": 0
+  },
+  "sweep": {
+    "dataset.split": [
+      {
+        "kind": "holdout",
+        "ratio": 0.8,
+        "stratified": false
+      },
+      {
+        "kind": "holdout",
+        "ratio": 0.5,
+        "stratified": true
+      },
+      {
+        "kind": "holdout",
+        "ratio": 0.6,
+        "stratified": true
+      },
+      {
+        "kind": "holdout",
+        "ratio": 0.7,
+        "stratified": true
+      },
+      {
+        "kind": "holdout",
+        "ratio": 0.8,
+        "stratified": true
+      },
+      {
+        "kind": "holdout",
+        "ratio": 0.9,
+        "stratified": true
+      },
+      {
+        "kind": "kfold",
+        "k": 5,
+        "stratified": true
+      }
+    ]
+  }
+}
