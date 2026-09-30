@@ -19,13 +19,14 @@ from analysis.ej1_generalization import (
     cost_sensitivity,
     criteria_table,
     main,
+    near_cut_fraction,
     oof_predictions,
     per_1000,
     select_config,
     split_estimates,
     strategy_name,
 )
-from experiments.config import expand, load_config
+from experiments.config import config_hash, expand, load_config
 from experiments.ej1_best_fold import run_best_fold
 from experiments.runner import final_eval, run_experiment
 
@@ -153,6 +154,14 @@ def _toy_scores(n: int = 2000):
     y = (rng.uniform(size=n) < 0.12).astype(int)
     s = np.clip(0.25 + 0.5 * y + rng.normal(0, 0.2, n), 0, 1)
     return y, s
+
+
+def test_errores_cerca_del_corte():
+    prob = np.array([0.1, 0.8, 0.9, 0.99, 0.5])
+    y = prob > 0.85
+    flagged = np.array([False, True, False, True, True])  # errores en 0.8, 0.9 y 0.5
+    assert near_cut_fraction(prob, y, flagged) == pytest.approx(2 / 3)
+    assert np.isnan(near_cut_fraction(prob, y, y))
 
 
 def test_criterios():
@@ -317,3 +326,19 @@ def test_main_genera_todas_las_figuras(tmp_path):
 
 def test_main_sin_cv_devuelve_2(tmp_path):
     assert main(["--results-dir", str(tmp_path), "--out-dir", str(tmp_path / "o")]) == 2
+
+
+def test_final_reentrena_exactamente_la_config_elegida_en_cv():
+    final = load_config(CONFIG_DIR / "final.json", final_eval=True)
+    assert final["run_name"] == "ej1_final"
+    assert final["final"]["mode"] == "retrain"
+    assert final["dataset"]["holdout_test"]["indices_path"] == TEST_IDX
+    selected = Path(final["selected_from"])
+    assert selected.parent == Path("results/ej1_cv")
+    [run] = [
+        r
+        for r in expand(load_config(CONFIG_DIR / "cv.json"))
+        if r["seed"] == 0 and r["fold"] == 0 and config_hash(r) == selected.name
+    ]
+    for key in ("dataset", "model", "training", "metrics"):
+        assert final[key] == run[key], key

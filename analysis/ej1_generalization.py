@@ -58,6 +58,8 @@ CV, SPLIT, BEST_FOLD, FINAL = "ej1_cv", "ej1_split_strategy", "ej1_best_fold", "
 LABEL = "flagged_fraud"
 # flagged_fraud = 1 ⇔ probabilidad de BigModel > 0.85 (docs/datos/fraud_dataset.md).
 BIGMODEL_THRESHOLD = 0.85
+# Franja de probabilidad de BigModel "cerca del corte" para ubicar los errores en TEST.
+NEAR_CUT = (0.7, 0.95)
 COST_RATIOS = (1, 2, 5, 10, 20)
 COST_RATIO_TABLE = 5
 MIN_RECALLS = (0.8, 0.9)
@@ -377,6 +379,18 @@ def _binary_metrics(y: np.ndarray, s: np.ndarray, threshold: float) -> dict[str,
     }
 
 
+def near_cut_fraction(prob: np.ndarray, y: np.ndarray, flagged: np.ndarray) -> float:
+    """Fracción de los errores (FN + FP) con probabilidad de BigModel dentro de NEAR_CUT.
+
+    prob (n,): probabilidad de BigModel. y, flagged (n,): etiqueta real y predicha. NaN sin errores.
+    """
+    errors = np.asarray(y).astype(bool) != np.asarray(flagged).astype(bool)
+    if not errors.any():
+        return float("nan")
+    lo, hi = NEAR_CUT
+    return float(np.mean((prob[errors] >= lo) & (prob[errors] <= hi)))
+
+
 def final_results(final_dir: Path, labels: np.ndarray, threshold: float) -> dict[str, Any]:
     """Métricas en TEST de cada modelo de ej1_final con el umbral elegido en OOF."""
     report = _read_json(final_dir / "final_eval.json")
@@ -395,6 +409,7 @@ def final_results(final_dir: Path, labels: np.ndarray, threshold: float) -> dict
                 "mse": float(np.mean((s - prob) ** 2)),
                 **_binary_metrics(y, s, threshold),
                 "por_1000": per_1000(y, s, threshold),
+                "errores_cerca_del_corte": near_cut_fraction(prob, y, s >= threshold),
             }
         )
     keys = [k for k, v in models[0].items() if isinstance(v, (int, float))]
@@ -419,6 +434,7 @@ def final_results(final_dir: Path, labels: np.ndarray, threshold: float) -> dict
         "por_1000_mean": {
             k: float(np.mean([m["por_1000"][k] for m in models])) for k in models[0]["por_1000"]
         },
+        "fraccion_cerca_del_corte": float(np.mean((prob >= NEAR_CUT[0]) & (prob <= NEAR_CUT[1]))),
         # BigModel en el mismo TEST: su probabilidad es el target (y_true de las predicciones).
         "bigmodel": _binary_metrics(y, prob, BIGMODEL_THRESHOLD)
         | {"threshold": BIGMODEL_THRESHOLD},
@@ -661,7 +677,7 @@ def fig_threshold_metrics(
     ax.set_xlabel("Umbral t (fraude si score ≥ t)")
     ax.set_ylabel("Métrica (OOF)")
     ax.set_ylim(0, 1.02)
-    ax.legend(loc="upper right")
+    ax.legend(loc="center left")
     ax.set_title("E1-B-c · Métricas vs umbral (OOF), umbrales de cada criterio (★ recomendado)")
     return fig
 
@@ -720,7 +736,12 @@ def fig_test_confusion(test: Mapping[str, Any]) -> Any:
     ]
     big = test["bigmodel"]
     cell = [
-        [n, _pm(mean[k], std[k], "{:.3f}"), f"{big[k]:.3f}" if k in big else "—"] for n, k in rows
+        [
+            n,
+            _pm(mean[k], std[k], "{:.2e}" if k == "mse" else "{:.3f}"),
+            f"{big[k]:.3f}" if k in big else "—",
+        ]
+        for n, k in rows
     ]
     ax2.axis("off")
     t = ax2.table(
