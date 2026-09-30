@@ -1,0 +1,40 @@
+{
+  "run_id": "867ee97e_s4",
+  "hash": "867ee97e",
+  "seed": 4,
+  "fold": null,
+  "status": "ok",
+  "trainer": "backprop",
+  "task": "regression",
+  "threshold": null,
+  "n_classes": null,
+  "epochs": 500,
+  "epochs_trained": 500,
+  "best_epoch": 500,
+  "stopped_epoch": null,
+  "time_total_s": 1.858245170000373,
+  "s_per_epoch": 0.003716490340000746,
+  "n_params": 7,
+  "lr_final": 0.0001,
+  "resumed_from_epoch": null,
+  "smoke": false,
+  "git_commit": "1818daa",
+  "python_version": "3.12.3",
+  "numpy_version": "2.5.3",
+  "data": {
+    "path": "datasets/fraud_dataset.csv",
+    "sha256": "0e0d2fdf7e6c294b7b8ea2e80452a270f1fad1de02edee9cc25f6eec2ab4c707",
+    "n_rows": 7500,
+    "n_dev": 7500,
+    "n_test_excluded": 0,
+    "n_train": 7500,
+    "n_val": 0
+  },
+  "train": {
+    "loss": 0.20539377228009337,
+    "mse": 0.20539377228009337,
+    "mae": 0.3638985648489927,
+    "rmse": 0.4532038970265959
+  },
+  "val": null
+}
