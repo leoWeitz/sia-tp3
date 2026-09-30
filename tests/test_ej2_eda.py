@@ -91,7 +91,7 @@ def test_check_duplicates_detecta_duplicados_intra_e_inter():
     row3 = np.ones(DIGITS_N_PIXELS) * 0.5
 
     d1 = np.array([row1, row2, row1])  # 1 duplicado intra
-    d2 = np.array([row1, row3])        # 1 coincidencia con d1
+    d2 = np.array([row1, row3])  # 1 coincidencia con d1
 
     dups = check_duplicates({"d1": d1, "d2": d2})
     assert dups["intra_dataset"]["d1"] == 1
@@ -110,11 +110,16 @@ def test_main_ejecuta_correctamente_en_tmp_path(tmp_path):
     synthetic_digits_csv(tr_path, n_samples=30, seed=1)
     synthetic_digits_csv(te_path, n_samples=15, seed=2)
 
-    code = main([
-        "--train", str(tr_path),
-        "--test", str(te_path),
-        "--out-dir", str(out_dir),
-    ])
+    code = main(
+        [
+            "--train",
+            str(tr_path),
+            "--test",
+            str(te_path),
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
     assert code == 0
 
     # Verificar que existan todas las figuras pedidas

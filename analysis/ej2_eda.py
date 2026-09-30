@@ -1,7 +1,7 @@
 """Exploración de datasets de dígitos (F12 - Parte 1: EDA).
 
 Genera figuras limpias, tablas y resumen cuantitativo para docs/datos/digits.md:
-- Balance de clases comparativo entre train, test y more_digits (marcando la falta del 8 y escasez del 5).
+- Balance de clases comparativo (falta del dígito 8 y escasez del 5).
 - Dígito promedio por clase (28×28).
 - Grilla de ejemplos reales por clase.
 - Distribución de intensidad de píxeles y mapa de varianza (píxeles muertos en bordes).
@@ -432,7 +432,11 @@ def run_eda(
 
     # 3. Dígito promedio
     avg_train = compute_average_digits(X_train, y_train)
-    avg_test = compute_average_digits(X_test, y_test) if X_test is not None and y_test is not None else None
+    avg_test = (
+        compute_average_digits(X_test, y_test)
+        if X_test is not None and y_test is not None
+        else None
+    )
 
     # 4. Estadísticos de píxeles
     stats_tr = pixel_stats(X_train)
@@ -499,7 +503,9 @@ def run_eda(
         "conclusions": {
             "ausencia_8_train": True if np.sum(y_train == 8) == 0 else False,
             "techo_teorico_accuracy_test": max_te_acc,
-            "decision_normalizacion": "none (píxeles en [0, 1], 97 píxeles con varianza 0 en bordes)",
+            "decision_normalizacion": (
+                "none (píxeles en [0, 1], 97 píxeles con varianza 0 en bordes)"
+            ),
             "decision_target_encoding": "onehot (10 neuronas de salida)",
             "protocolo_validacion_default": "holdout 80/20 estratificado (3 semillas)",
             "protocolo_validacion_alternativo": "5-fold estratificado",
