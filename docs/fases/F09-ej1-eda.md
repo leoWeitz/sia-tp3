@@ -51,11 +51,11 @@
 - Crear `experiments/configs/ej1/base.json` con `dataset.path`, `target` (`big_model_fraud_probability`), `features`, `drop` (incluye `flagged_fraud`), `categorical`, `normalize` por defecto (proponer min-max [0,1] o z-score según la EDA, justificado).
 
 ## Criterios de aceptación
-- [ ] Las 8 preguntas tienen respuesta explícita en `docs/datos/fraud_dataset.md`.
-- [ ] Decisión de features escrita en `docs/datos/fraud_dataset.md` y revisada por el equipo.
-- [ ] `flagged_fraud` figura en `drop` de `experiments/configs/ej1/base.json`.
-- [ ] `experiments/configs/ej1/base.json` pasa la validación de `load_config` (si F07 ya está) y sus columnas cargan con `load_csv` (F05).
-- [ ] Figuras de EDA generadas por script (no desde el notebook).
+- [x] Las 8 preguntas tienen respuesta explícita en `docs/datos/fraud_dataset.md`.
+- [ ] Decisión de features escrita en `docs/datos/fraud_dataset.md` y revisada por el equipo. (Escrita; **falta la revisión del equipo**.)
+- [x] `flagged_fraud` figura en `drop` de `experiments/configs/ej1/base.json`.
+- [x] `experiments/configs/ej1/base.json` pasa la validación de `load_config` (si F07 ya está) y sus columnas cargan con `load_csv` (F05).
+- [x] Figuras de EDA generadas por script (no desde el notebook).
 
 ## Notas para el agente
 - **No entrenar nada en esta fase.**

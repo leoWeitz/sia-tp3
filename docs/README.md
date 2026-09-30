@@ -39,7 +39,7 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | F06 | [Métricas y umbral](fases/F06-metricas.md) | — | ✅ Hecho |
 | F07 | [Runner, configs, save/load](fases/F07-infra-experimentos.md) | F04, F05, F06 | ✅ Hecho |
 | F08 | [Validación](fases/F08-validacion.md) | F07 (solo figuras) | ✅ Hecho · falta T3 (verificación en papel) |
-| F09 | [Ej1 · EDA fraude](fases/F09-ej1-eda.md) | — (solo pandas) | ⏳ |
+| F09 | [Ej1 · EDA fraude](fases/F09-ej1-eda.md) | — (solo pandas) | ✅ Hecho · falta revisión del equipo de la decisión de features |
 | F10 | [Ej1 · Aprendizaje](fases/F10-ej1-aprendizaje.md) | F07, F09 | ⏳ |
 | F11 | [Ej1 · Generalización y umbral](fases/F11-ej1-generalizacion.md) | F10 | ⏳ |
 | F12 | [Ej2 · Dígitos](fases/F12-ej2-digitos.md) | Parte 1 (EDA): — · resto: F07 | ⏳ |
