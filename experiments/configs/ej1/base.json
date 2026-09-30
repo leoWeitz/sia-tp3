@@ -1,0 +1,27 @@
+{
+  "run_name": "ej1_base",
+  "seeds": [0, 1, 2],
+  "dataset": {
+    "name": "fraud_dataset",
+    "path": "datasets/fraud_dataset.csv",
+    "target": "big_model_fraud_probability",
+    "features": [
+      "amount_usd",
+      "quantity_purchased",
+      "session_duration_seconds",
+      "days_since_last_purchase",
+      "account_age_days",
+      "items_viewed_before_purchase"
+    ],
+    "drop": ["flagged_fraud", "timestamp", "device_screen_resolution", "time_since_last_login_s"],
+    "categorical": [],
+    "task": "regression",
+    "normalize": "zscore",
+    "target_encoding": "none",
+    "split": {"kind": "none"}
+  },
+  "model": {"layers": ["auto", 1], "output_activation": "sigmoid", "beta": 1.0},
+  "training": {"loss": "mse", "optimizer": {"kind": "gd", "lr": 0.01}, "epochs": 500},
+  "metrics": ["mse", "mae"],
+  "logging": {"every": 50, "save_predictions": true}
+}
