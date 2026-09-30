@@ -295,7 +295,7 @@ def summary(df: pd.DataFrame, path: str | Path) -> dict[str, Any]:
         "correlacion": {
             c: {
                 "pearson_target": float(df[c].corr(df[TARGET])),
-                "spearman_target": float(df[c].corr(df[TARGET], method="spearman")),
+                "spearman_target": float(df[c].rank().corr(df[TARGET].rank())),
                 "pearson_etiqueta": float(df[c].corr(df[LABEL])),
             }
             for c in features
