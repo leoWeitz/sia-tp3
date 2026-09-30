@@ -50,10 +50,10 @@ Para que la comparación sea justa: mismos features, mismo scaler, misma cantida
 - **c) Elección:** qué perceptrón se lleva a generalización y por qué (potencial de aprendizaje + salida interpretable como probabilidad).
 
 ## Criterios de aceptación
-- [ ] Configs corren completas; `summary.csv` generado.
-- [ ] Figuras 1–6 generadas por script.
-- [ ] `docs/resultados/ej1.md` con las tres respuestas respaldadas por figura y número.
-- [ ] Elección E1-A-c (modelo y hiperparámetros de partida para F11) escrita en `docs/resultados/ej1.md`.
+- [x] Configs corren completas; `summary.csv` generado.
+- [x] Figuras 1–6 generadas por script.
+- [x] `docs/resultados/ej1.md` con las tres respuestas respaldadas por figura y número.
+- [x] Elección E1-A-c (modelo y hiperparámetros de partida para F11) escrita en `docs/resultados/ej1.md`.
 
 ## Notas para el agente
 - No correr los barridos completos sin OK (estimar tiempo primero con `--smoke` y avisar).
