@@ -1,0 +1,1055 @@
+{
+  "archivo": "datasets/fraud_dataset.csv",
+  "sha256": "0e0d2fdf7e6c294b7b8ea2e80452a270f1fad1de02edee9cc25f6eec2ab4c707",
+  "filas": 7500,
+  "columnas": 11,
+  "nan_total": 0,
+  "duplicados": 0,
+  "duplicados_sin_target_ni_etiqueta": 0,
+  "n_positivos": 869,
+  "tasa_positivos": 0.11586666666666667,
+  "target_fuera_de_0_1": 0,
+  "negativos_en_features": {
+    "timestamp": 0,
+    "amount_usd": 0,
+    "quantity_purchased": 0,
+    "session_duration_seconds": 0,
+    "days_since_last_purchase": 0,
+    "account_age_days": 0,
+    "device_screen_resolution": 0,
+    "time_since_last_login_s": 0,
+    "items_viewed_before_purchase": 0
+  },
+  "correlacion": {
+    "timestamp": {
+      "pearson_target": 0.0014326509113201525,
+      "spearman_target": 0.00365290587364384,
+      "pearson_etiqueta": -0.013375660021141815
+    },
+    "amount_usd": {
+      "pearson_target": 0.5573936922060252,
+      "spearman_target": 0.5838056854433683,
+      "pearson_etiqueta": 0.5798156257505446
+    },
+    "quantity_purchased": {
+      "pearson_target": 0.5631276151691575,
+      "spearman_target": 0.4753656704105292,
+      "pearson_etiqueta": 0.6090045891484802
+    },
+    "session_duration_seconds": {
+      "pearson_target": -0.5138033801230067,
+      "spearman_target": -0.46054891356227184,
+      "pearson_etiqueta": -0.5200429120385246
+    },
+    "days_since_last_purchase": {
+      "pearson_target": -0.4042365007969018,
+      "spearman_target": -0.44792073349316053,
+      "pearson_etiqueta": -0.25858450446544956
+    },
+    "account_age_days": {
+      "pearson_target": -0.5847364235533944,
+      "spearman_target": -0.5830195954368613,
+      "pearson_etiqueta": -0.46093339925199633
+    },
+    "device_screen_resolution": {
+      "pearson_target": 0.024618258280187304,
+      "spearman_target": 0.02883705229750689,
+      "pearson_etiqueta": 0.015232809493426178
+    },
+    "time_since_last_login_s": {
+      "pearson_target": 0.002444919783365736,
+      "spearman_target": 0.0008385334899127026,
+      "pearson_etiqueta": -0.0028154817682254523
+    },
+    "items_viewed_before_purchase": {
+      "pearson_target": 0.33436516698927904,
+      "spearman_target": 0.1725588195463436,
+      "pearson_etiqueta": 0.5533597054894328
+    }
+  },
+  "correlacion_target_etiqueta": 0.6532547715829519,
+  "separacion": {
+    "max_negativo": 0.849891,
+    "min_positivo": 0.850089,
+    "separable": true,
+    "corte_medio": 0.84999,
+    "n_solapados": 0
+  },
+  "bigmodel": {
+    "roc_auc": 1.0,
+    "average_precision": 1.0,
+    "umbral_0.5": {
+      "umbral": 0.5,
+      "precision": 0.31646030589949015,
+      "recall": 1.0
+    },
+    "umbral_corte_medio": {
+      "umbral": 0.84999,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "spikes": [
+    {
+      "columna": "amount_usd",
+      "valor": 100.0,
+      "n": 156,
+      "tasa_positivos": 0.9871794871794872,
+      "prob_media": 0.9466928974358974
+    },
+    {
+      "columna": "amount_usd",
+      "valor": 1.0,
+      "n": 82,
+      "tasa_positivos": 0.0,
+      "prob_media": 0.2105430243902439
+    },
+    {
+      "columna": "session_duration_seconds",
+      "valor": 5.0,
+      "n": 64,
+      "tasa_positivos": 1.0,
+      "prob_media": 0.9831641875
+    },
+    {
+      "columna": "session_duration_seconds",
+      "valor": 10.0,
+      "n": 53,
+      "tasa_positivos": 0.03773584905660377,
+      "prob_media": 0.48189967924528293
+    }
+  ],
+  "cotas_por_clase": {
+    "timestamp": {
+      "neg_min": 1700001808.0,
+      "neg_max": 1731534222.0,
+      "pos_min": 1700123561.0,
+      "pos_max": 1731532930.0,
+      "pos_fuera_de_rango_neg": 0
+    },
+    "amount_usd": {
+      "neg_min": 1.0,
+      "neg_max": 500.0,
+      "pos_min": 16.44,
+      "pos_max": 2000.0,
+      "pos_fuera_de_rango_neg": 199
+    },
+    "quantity_purchased": {
+      "neg_min": 1.0,
+      "neg_max": 9.0,
+      "pos_min": 1.0,
+      "pos_max": 24.0,
+      "pos_fuera_de_rango_neg": 524
+    },
+    "session_duration_seconds": {
+      "neg_min": 10.0,
+      "neg_max": 726.8,
+      "pos_min": 5.0,
+      "pos_max": 505.6,
+      "pos_fuera_de_rango_neg": 74
+    },
+    "days_since_last_purchase": {
+      "neg_min": 0.0,
+      "neg_max": 142.32,
+      "pos_min": 0.0,
+      "pos_max": 37.7,
+      "pos_fuera_de_rango_neg": 0
+    },
+    "account_age_days": {
+      "neg_min": 30.0,
+      "neg_max": 3649.0,
+      "pos_min": 1.0,
+      "pos_max": 3436.0,
+      "pos_fuera_de_rango_neg": 114
+    },
+    "device_screen_resolution": {
+      "neg_min": 1009946.0,
+      "neg_max": 8310940.0,
+      "pos_min": 1006733.0,
+      "pos_max": 8306744.0,
+      "pos_fuera_de_rango_neg": 2
+    },
+    "time_since_last_login_s": {
+      "neg_min": 10.0,
+      "neg_max": 40160.8,
+      "pos_min": 10.0,
+      "pos_max": 23582.1,
+      "pos_fuera_de_rango_neg": 0
+    },
+    "items_viewed_before_purchase": {
+      "neg_min": 1.0,
+      "neg_max": 14.0,
+      "pos_min": 1.0,
+      "pos_max": 29.0,
+      "pos_fuera_de_rango_neg": 490
+    }
+  },
+  "resolucion": {
+    "desvio_px_std": 5011.856311181974,
+    "desvio_px_max_abs": 21635,
+    "grupos": {
+      "1280x800": {
+        "n": 1523,
+        "tasa_positivos": 0.1057124097176625,
+        "prob_media": 0.4063027012475377
+      },
+      "1366x768": {
+        "n": 1507,
+        "tasa_positivos": 0.10484406104844061,
+        "prob_media": 0.4171492236230923
+      },
+      "1920x1080": {
+        "n": 1522,
+        "tasa_positivos": 0.1287779237844941,
+        "prob_media": 0.43883420302233905
+      },
+      "2560x1440": {
+        "n": 1504,
+        "tasa_positivos": 0.11768617021276596,
+        "prob_media": 0.41447758976063825
+      },
+      "3840x2160": {
+        "n": 1444,
+        "tasa_positivos": 0.12257617728531855,
+        "prob_media": 0.43778892105263156
+      }
+    }
+  },
+  "tiempo": {
+    "desde": "2023-11-14 22:43:28",
+    "hasta": "2024-11-13 21:43:42",
+    "hora": {
+      "grupos": 24,
+      "tasa_positivos_min": 0.0981012658227848,
+      "tasa_positivos_max": 0.13758389261744966,
+      "prob_media_min": 0.3968262753164557,
+      "prob_media_max": 0.457249956375839
+    },
+    "dia_semana": {
+      "grupos": 7,
+      "tasa_positivos_min": 0.10321324245374879,
+      "tasa_positivos_max": 0.1307901907356948,
+      "prob_media_min": 0.4120593916211293,
+      "prob_media_max": 0.43908282984790875
+    },
+    "mes": {
+      "grupos": 13,
+      "tasa_positivos_min": 0.09090909090909091,
+      "tasa_positivos_max": 0.13946117274167988,
+      "prob_media_min": 0.39071966300940436,
+      "prob_media_max": 0.4487158944723618
+    }
+  },
+  "estratos_por_cuantiles": [
+    {
+      "estrato": 0,
+      "n": 750,
+      "prob_min": 0.000897,
+      "prob_max": 0.068976,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 1,
+      "n": 750,
+      "prob_min": 0.069029,
+      "prob_max": 0.125922,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 2,
+      "n": 750,
+      "prob_min": 0.125945,
+      "prob_max": 0.192748,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 3,
+      "n": 750,
+      "prob_min": 0.193014,
+      "prob_max": 0.269862,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 4,
+      "n": 750,
+      "prob_min": 0.270004,
+      "prob_max": 0.357256,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 5,
+      "n": 750,
+      "prob_min": 0.357427,
+      "prob_max": 0.460736,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 6,
+      "n": 750,
+      "prob_min": 0.460873,
+      "prob_max": 0.589826,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 7,
+      "n": 750,
+      "prob_min": 0.5903,
+      "prob_max": 0.740493,
+      "tasa_positivos": 0.0
+    },
+    {
+      "estrato": 8,
+      "n": 750,
+      "prob_min": 0.740527,
+      "prob_max": 0.891345,
+      "tasa_positivos": 0.15866666666666668
+    },
+    {
+      "estrato": 9,
+      "n": 750,
+      "prob_min": 0.891413,
+      "prob_max": 1.0,
+      "tasa_positivos": 1.0
+    }
+  ],
+  "deciles": {
+    "timestamp": [
+      {
+        "decil": 1,
+        "desde": 1700001808,
+        "hasta": 1703183489,
+        "n": 750,
+        "big_model_fraud_probability": 0.4198065813333334,
+        "flagged_fraud": 0.11466666666666667
+      },
+      {
+        "decil": 2,
+        "desde": 1703192527,
+        "hasta": 1706216371,
+        "n": 750,
+        "big_model_fraud_probability": 0.42441455733333333,
+        "flagged_fraud": 0.112
+      },
+      {
+        "decil": 3,
+        "desde": 1706217227,
+        "hasta": 1709436560,
+        "n": 750,
+        "big_model_fraud_probability": 0.4078995853333333,
+        "flagged_fraud": 0.112
+      },
+      {
+        "decil": 4,
+        "desde": 1709440488,
+        "hasta": 1712495466,
+        "n": 750,
+        "big_model_fraud_probability": 0.42544182799999997,
+        "flagged_fraud": 0.13466666666666666
+      },
+      {
+        "decil": 5,
+        "desde": 1712496479,
+        "hasta": 1715680666,
+        "n": 750,
+        "big_model_fraud_probability": 0.450053676,
+        "flagged_fraud": 0.14266666666666666
+      },
+      {
+        "decil": 6,
+        "desde": 1715685136,
+        "hasta": 1719025117,
+        "n": 750,
+        "big_model_fraud_probability": 0.4268952693333333,
+        "flagged_fraud": 0.116
+      },
+      {
+        "decil": 7,
+        "desde": 1719028514,
+        "hasta": 1722221247,
+        "n": 750,
+        "big_model_fraud_probability": 0.42501840799999996,
+        "flagged_fraud": 0.11466666666666667
+      },
+      {
+        "decil": 8,
+        "desde": 1722224094,
+        "hasta": 1725314472,
+        "n": 750,
+        "big_model_fraud_probability": 0.3969347773333333,
+        "flagged_fraud": 0.1
+      },
+      {
+        "decil": 9,
+        "desde": 1725318201,
+        "hasta": 1728559549,
+        "n": 750,
+        "big_model_fraud_probability": 0.413211876,
+        "flagged_fraud": 0.096
+      },
+      {
+        "decil": 10,
+        "desde": 1728559848,
+        "hasta": 1731534222,
+        "n": 750,
+        "big_model_fraud_probability": 0.4381768386666667,
+        "flagged_fraud": 0.116
+      }
+    ],
+    "amount_usd": [
+      {
+        "decil": 1,
+        "desde": 1.0,
+        "hasta": 9.07,
+        "n": 750,
+        "big_model_fraud_probability": 0.23464426133333333,
+        "flagged_fraud": 0.0
+      },
+      {
+        "decil": 2,
+        "desde": 9.13,
+        "hasta": 19.9,
+        "n": 750,
+        "big_model_fraud_probability": 0.24365385466666664,
+        "flagged_fraud": 0.0026666666666666666
+      },
+      {
+        "decil": 3,
+        "desde": 19.91,
+        "hasta": 32.57,
+        "n": 750,
+        "big_model_fraud_probability": 0.26057345466666665,
+        "flagged_fraud": 0.0
+      },
+      {
+        "decil": 4,
+        "desde": 32.58,
+        "hasta": 46.75,
+        "n": 750,
+        "big_model_fraud_probability": 0.2913811466666667,
+        "flagged_fraud": 0.0013333333333333333
+      },
+      {
+        "decil": 5,
+        "desde": 46.77,
+        "hasta": 63.47,
+        "n": 750,
+        "big_model_fraud_probability": 0.32465004533333336,
+        "flagged_fraud": 0.005333333333333333
+      },
+      {
+        "decil": 6,
+        "desde": 63.51,
+        "hasta": 86.05,
+        "n": 750,
+        "big_model_fraud_probability": 0.3465726493333333,
+        "flagged_fraud": 0.008
+      },
+      {
+        "decil": 7,
+        "desde": 86.06,
+        "hasta": 109.44,
+        "n": 750,
+        "big_model_fraud_probability": 0.5118307106666667,
+        "flagged_fraud": 0.22666666666666666
+      },
+      {
+        "decil": 8,
+        "desde": 109.46,
+        "hasta": 151.21,
+        "n": 750,
+        "big_model_fraud_probability": 0.5138104906666666,
+        "flagged_fraud": 0.112
+      },
+      {
+        "decil": 9,
+        "desde": 151.32,
+        "hasta": 238.26,
+        "n": 750,
+        "big_model_fraud_probability": 0.6298607946666667,
+        "flagged_fraud": 0.188
+      },
+      {
+        "decil": 10,
+        "desde": 238.4,
+        "hasta": 2000.0,
+        "n": 750,
+        "big_model_fraud_probability": 0.8708759893333332,
+        "flagged_fraud": 0.6146666666666667
+      }
+    ],
+    "quantity_purchased": [
+      {
+        "decil": 1,
+        "desde": 1,
+        "hasta": 1,
+        "n": 750,
+        "big_model_fraud_probability": 0.23224000133333333,
+        "flagged_fraud": 0.006666666666666667
+      },
+      {
+        "decil": 2,
+        "desde": 1,
+        "hasta": 2,
+        "n": 750,
+        "big_model_fraud_probability": 0.260292076,
+        "flagged_fraud": 0.005333333333333333
+      },
+      {
+        "decil": 3,
+        "desde": 2,
+        "hasta": 3,
+        "n": 750,
+        "big_model_fraud_probability": 0.318491036,
+        "flagged_fraud": 0.048
+      },
+      {
+        "decil": 4,
+        "desde": 3,
+        "hasta": 4,
+        "n": 750,
+        "big_model_fraud_probability": 0.3496607133333334,
+        "flagged_fraud": 0.06266666666666666
+      },
+      {
+        "decil": 5,
+        "desde": 4,
+        "hasta": 5,
+        "n": 750,
+        "big_model_fraud_probability": 0.387859092,
+        "flagged_fraud": 0.052
+      },
+      {
+        "decil": 6,
+        "desde": 5,
+        "hasta": 6,
+        "n": 750,
+        "big_model_fraud_probability": 0.41504940133333335,
+        "flagged_fraud": 0.05466666666666667
+      },
+      {
+        "decil": 7,
+        "desde": 6,
+        "hasta": 7,
+        "n": 750,
+        "big_model_fraud_probability": 0.4278499586666667,
+        "flagged_fraud": 0.06666666666666667
+      },
+      {
+        "decil": 8,
+        "desde": 7,
+        "hasta": 8,
+        "n": 750,
+        "big_model_fraud_probability": 0.4709009253333334,
+        "flagged_fraud": 0.05466666666666667
+      },
+      {
+        "decil": 9,
+        "desde": 8,
+        "hasta": 9,
+        "n": 750,
+        "big_model_fraud_probability": 0.5083702773333334,
+        "flagged_fraud": 0.08
+      },
+      {
+        "decil": 10,
+        "desde": 9,
+        "hasta": 24,
+        "n": 750,
+        "big_model_fraud_probability": 0.857139916,
+        "flagged_fraud": 0.728
+      }
+    ],
+    "session_duration_seconds": [
+      {
+        "decil": 1,
+        "desde": 5.0,
+        "hasta": 79.1,
+        "n": 750,
+        "big_model_fraud_probability": 0.8491727493333333,
+        "flagged_fraud": 0.7293333333333333
+      },
+      {
+        "decil": 2,
+        "desde": 79.2,
+        "hasta": 156.3,
+        "n": 750,
+        "big_model_fraud_probability": 0.609145364,
+        "flagged_fraud": 0.30266666666666664
+      },
+      {
+        "decil": 3,
+        "desde": 156.5,
+        "hasta": 210.3,
+        "n": 750,
+        "big_model_fraud_probability": 0.43082815733333335,
+        "flagged_fraud": 0.024
+      },
+      {
+        "decil": 4,
+        "desde": 210.3,
+        "hasta": 253.1,
+        "n": 750,
+        "big_model_fraud_probability": 0.4111425613333333,
+        "flagged_fraud": 0.02666666666666667
+      },
+      {
+        "decil": 5,
+        "desde": 253.1,
+        "hasta": 287.0,
+        "n": 750,
+        "big_model_fraud_probability": 0.3705714706666667,
+        "flagged_fraud": 0.02266666666666667
+      },
+      {
+        "decil": 6,
+        "desde": 287.0,
+        "hasta": 323.0,
+        "n": 750,
+        "big_model_fraud_probability": 0.35381430799999997,
+        "flagged_fraud": 0.016
+      },
+      {
+        "decil": 7,
+        "desde": 323.0,
+        "hasta": 357.2,
+        "n": 750,
+        "big_model_fraud_probability": 0.3473273866666667,
+        "flagged_fraud": 0.013333333333333334
+      },
+      {
+        "decil": 8,
+        "desde": 357.2,
+        "hasta": 398.0,
+        "n": 750,
+        "big_model_fraud_probability": 0.31483519866666665,
+        "flagged_fraud": 0.012
+      },
+      {
+        "decil": 9,
+        "desde": 398.0,
+        "hasta": 454.1,
+        "n": 750,
+        "big_model_fraud_probability": 0.29885618266666664,
+        "flagged_fraud": 0.008
+      },
+      {
+        "decil": 10,
+        "desde": 454.1,
+        "hasta": 726.8,
+        "n": 750,
+        "big_model_fraud_probability": 0.24216001866666667,
+        "flagged_fraud": 0.004
+      }
+    ],
+    "days_since_last_purchase": [
+      {
+        "decil": 1,
+        "desde": 0.0,
+        "hasta": 1.01,
+        "n": 750,
+        "big_model_fraud_probability": 0.661920084,
+        "flagged_fraud": 0.4066666666666667
+      },
+      {
+        "decil": 2,
+        "desde": 1.01,
+        "hasta": 2.33,
+        "n": 750,
+        "big_model_fraud_probability": 0.595158636,
+        "flagged_fraud": 0.3
+      },
+      {
+        "decil": 3,
+        "desde": 2.33,
+        "hasta": 4.06,
+        "n": 750,
+        "big_model_fraud_probability": 0.5356864386666667,
+        "flagged_fraud": 0.19733333333333333
+      },
+      {
+        "decil": 4,
+        "desde": 4.06,
+        "hasta": 6.07,
+        "n": 750,
+        "big_model_fraud_probability": 0.46947636800000003,
+        "flagged_fraud": 0.11866666666666667
+      },
+      {
+        "decil": 5,
+        "desde": 6.08,
+        "hasta": 8.59,
+        "n": 750,
+        "big_model_fraud_probability": 0.4212654066666667,
+        "flagged_fraud": 0.06266666666666666
+      },
+      {
+        "decil": 6,
+        "desde": 8.59,
+        "hasta": 11.91,
+        "n": 750,
+        "big_model_fraud_probability": 0.3834362266666667,
+        "flagged_fraud": 0.02666666666666667
+      },
+      {
+        "decil": 7,
+        "desde": 11.92,
+        "hasta": 16.4,
+        "n": 750,
+        "big_model_fraud_probability": 0.36304449333333333,
+        "flagged_fraud": 0.02
+      },
+      {
+        "decil": 8,
+        "desde": 16.41,
+        "hasta": 22.94,
+        "n": 750,
+        "big_model_fraud_probability": 0.32666097066666666,
+        "flagged_fraud": 0.013333333333333334
+      },
+      {
+        "decil": 9,
+        "desde": 22.94,
+        "hasta": 32.97,
+        "n": 750,
+        "big_model_fraud_probability": 0.28142433466666666,
+        "flagged_fraud": 0.009333333333333334
+      },
+      {
+        "decil": 10,
+        "desde": 32.98,
+        "hasta": 142.32,
+        "n": 750,
+        "big_model_fraud_probability": 0.18978043866666666,
+        "flagged_fraud": 0.004
+      }
+    ],
+    "account_age_days": [
+      {
+        "decil": 1,
+        "desde": 1,
+        "hasta": 138,
+        "n": 750,
+        "big_model_fraud_probability": 0.8686810426666666,
+        "flagged_fraud": 0.7626666666666667
+      },
+      {
+        "decil": 2,
+        "desde": 138,
+        "hasta": 454,
+        "n": 750,
+        "big_model_fraud_probability": 0.6413893946666667,
+        "flagged_fraud": 0.268
+      },
+      {
+        "decil": 3,
+        "desde": 454,
+        "hasta": 818,
+        "n": 750,
+        "big_model_fraud_probability": 0.500374596,
+        "flagged_fraud": 0.04533333333333334
+      },
+      {
+        "decil": 4,
+        "desde": 818,
+        "hasta": 1221,
+        "n": 750,
+        "big_model_fraud_probability": 0.41797901866666665,
+        "flagged_fraud": 0.024
+      },
+      {
+        "decil": 5,
+        "desde": 1221,
+        "hasta": 1633,
+        "n": 750,
+        "big_model_fraud_probability": 0.40033710933333333,
+        "flagged_fraud": 0.014666666666666666
+      },
+      {
+        "decil": 6,
+        "desde": 1634,
+        "hasta": 2038,
+        "n": 750,
+        "big_model_fraud_probability": 0.36856990666666667,
+        "flagged_fraud": 0.02
+      },
+      {
+        "decil": 7,
+        "desde": 2038,
+        "hasta": 2442,
+        "n": 750,
+        "big_model_fraud_probability": 0.32770199466666666,
+        "flagged_fraud": 0.008
+      },
+      {
+        "decil": 8,
+        "desde": 2443,
+        "hasta": 2846,
+        "n": 750,
+        "big_model_fraud_probability": 0.27466552266666666,
+        "flagged_fraud": 0.009333333333333334
+      },
+      {
+        "decil": 9,
+        "desde": 2846,
+        "hasta": 3255,
+        "n": 750,
+        "big_model_fraud_probability": 0.22460527466666666,
+        "flagged_fraud": 0.005333333333333333
+      },
+      {
+        "decil": 10,
+        "desde": 3255,
+        "hasta": 3649,
+        "n": 750,
+        "big_model_fraud_probability": 0.2035495373333333,
+        "flagged_fraud": 0.0013333333333333333
+      }
+    ],
+    "device_screen_resolution": [
+      {
+        "decil": 1,
+        "desde": 1006733,
+        "hasta": 1023842,
+        "n": 750,
+        "big_model_fraud_probability": 0.39725440133333334,
+        "flagged_fraud": 0.09466666666666666
+      },
+      {
+        "decil": 2,
+        "desde": 1023845,
+        "hasta": 1034705,
+        "n": 750,
+        "big_model_fraud_probability": 0.41524189733333333,
+        "flagged_fraud": 0.11466666666666667
+      },
+      {
+        "decil": 3,
+        "desde": 1034799,
+        "hasta": 1048839,
+        "n": 750,
+        "big_model_fraud_probability": 0.40706124,
+        "flagged_fraud": 0.108
+      },
+      {
+        "decil": 4,
+        "desde": 1048849,
+        "hasta": 1058853,
+        "n": 750,
+        "big_model_fraud_probability": 0.428757868,
+        "flagged_fraud": 0.104
+      },
+      {
+        "decil": 5,
+        "desde": 1058916,
+        "hasta": 2073158,
+        "n": 750,
+        "big_model_fraud_probability": 0.4268007893333333,
+        "flagged_fraud": 0.12
+      },
+      {
+        "decil": 6,
+        "desde": 2073158,
+        "hasta": 2083043,
+        "n": 750,
+        "big_model_fraud_probability": 0.44860414,
+        "flagged_fraud": 0.13866666666666666
+      },
+      {
+        "decil": 7,
+        "desde": 2083143,
+        "hasta": 3685891,
+        "n": 750,
+        "big_model_fraud_probability": 0.42379014,
+        "flagged_fraud": 0.12933333333333333
+      },
+      {
+        "decil": 8,
+        "desde": 3685891,
+        "hasta": 3695410,
+        "n": 750,
+        "big_model_fraud_probability": 0.40514328666666666,
+        "flagged_fraud": 0.10266666666666667
+      },
+      {
+        "decil": 9,
+        "desde": 3695467,
+        "hasta": 8294097,
+        "n": 750,
+        "big_model_fraud_probability": 0.44072506,
+        "flagged_fraud": 0.12266666666666666
+      },
+      {
+        "decil": 10,
+        "desde": 8294109,
+        "hasta": 8310940,
+        "n": 750,
+        "big_model_fraud_probability": 0.43447457466666667,
+        "flagged_fraud": 0.124
+      }
+    ],
+    "time_since_last_login_s": [
+      {
+        "decil": 1,
+        "desde": 10.0,
+        "hasta": 399.5,
+        "n": 750,
+        "big_model_fraud_probability": 0.42783086933333336,
+        "flagged_fraud": 0.12933333333333333
+      },
+      {
+        "decil": 2,
+        "desde": 400.0,
+        "hasta": 797.9,
+        "n": 750,
+        "big_model_fraud_probability": 0.4159307133333333,
+        "flagged_fraud": 0.09733333333333333
+      },
+      {
+        "decil": 3,
+        "desde": 800.0,
+        "hasta": 1319.4,
+        "n": 750,
+        "big_model_fraud_probability": 0.43069707733333334,
+        "flagged_fraud": 0.108
+      },
+      {
+        "decil": 4,
+        "desde": 1319.4,
+        "hasta": 1846.4,
+        "n": 750,
+        "big_model_fraud_probability": 0.42463321733333337,
+        "flagged_fraud": 0.11466666666666667
+      },
+      {
+        "decil": 5,
+        "desde": 1849.4,
+        "hasta": 2477.2,
+        "n": 750,
+        "big_model_fraud_probability": 0.4230002826666666,
+        "flagged_fraud": 0.13466666666666666
+      },
+      {
+        "decil": 6,
+        "desde": 2478.2,
+        "hasta": 3265.1,
+        "n": 750,
+        "big_model_fraud_probability": 0.4153479,
+        "flagged_fraud": 0.11333333333333333
+      },
+      {
+        "decil": 7,
+        "desde": 3267.5,
+        "hasta": 4321.7,
+        "n": 750,
+        "big_model_fraud_probability": 0.4142834626666667,
+        "flagged_fraud": 0.10666666666666667
+      },
+      {
+        "decil": 8,
+        "desde": 4321.9,
+        "hasta": 5814.2,
+        "n": 750,
+        "big_model_fraud_probability": 0.422949992,
+        "flagged_fraud": 0.112
+      },
+      {
+        "decil": 9,
+        "desde": 5817.1,
+        "hasta": 8273.6,
+        "n": 750,
+        "big_model_fraud_probability": 0.4354452026666667,
+        "flagged_fraud": 0.13333333333333333
+      },
+      {
+        "decil": 10,
+        "desde": 8275.6,
+        "hasta": 40160.8,
+        "n": 750,
+        "big_model_fraud_probability": 0.41773468,
+        "flagged_fraud": 0.10933333333333334
+      }
+    ],
+    "items_viewed_before_purchase": [
+      {
+        "decil": 1,
+        "desde": 1,
+        "hasta": 2,
+        "n": 750,
+        "big_model_fraud_probability": 0.39018034133333335,
+        "flagged_fraud": 0.016
+      },
+      {
+        "decil": 2,
+        "desde": 2,
+        "hasta": 4,
+        "n": 750,
+        "big_model_fraud_probability": 0.370388252,
+        "flagged_fraud": 0.018666666666666668
+      },
+      {
+        "decil": 3,
+        "desde": 4,
+        "hasta": 5,
+        "n": 750,
+        "big_model_fraud_probability": 0.36836297599999995,
+        "flagged_fraud": 0.02
+      },
+      {
+        "decil": 4,
+        "desde": 5,
+        "hasta": 7,
+        "n": 750,
+        "big_model_fraud_probability": 0.36024058666666664,
+        "flagged_fraud": 0.016
+      },
+      {
+        "decil": 5,
+        "desde": 7,
+        "hasta": 8,
+        "n": 750,
+        "big_model_fraud_probability": 0.38878335199999997,
+        "flagged_fraud": 0.05733333333333333
+      },
+      {
+        "decil": 6,
+        "desde": 8,
+        "hasta": 10,
+        "n": 750,
+        "big_model_fraud_probability": 0.4154267626666666,
+        "flagged_fraud": 0.08933333333333333
+      },
+      {
+        "decil": 7,
+        "desde": 10,
+        "hasta": 11,
+        "n": 750,
+        "big_model_fraud_probability": 0.3947831826666666,
+        "flagged_fraud": 0.06933333333333333
+      },
+      {
+        "decil": 8,
+        "desde": 11,
+        "hasta": 13,
+        "n": 750,
+        "big_model_fraud_probability": 0.390954448,
+        "flagged_fraud": 0.09866666666666667
+      },
+      {
+        "decil": 9,
+        "desde": 13,
+        "hasta": 14,
+        "n": 750,
+        "big_model_fraud_probability": 0.3747721426666667,
+        "flagged_fraud": 0.08533333333333333
+      },
+      {
+        "decil": 10,
+        "desde": 14,
+        "hasta": 29,
+        "n": 750,
+        "big_model_fraud_probability": 0.7739613533333333,
+        "flagged_fraud": 0.688
+      }
+    ]
+  }
+}
