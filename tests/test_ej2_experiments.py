@@ -89,6 +89,16 @@ def test_base_config_optimizador_y_reproducibilidad():
     assert "macro_f1" in config["metrics"]
 
 
+def test_lr_config_existe_y_valida_sweep():
+    lr_config_path = ROOT / "experiments/configs/ej2/lr.json"
+    assert lr_config_path.exists(), f"No existe {lr_config_path}"
+    config = load_config(lr_config_path)
+    assert config["run_name"] == "ej2_lr"
+    assert "training.optimizer.kind" in config["sweep"]
+    assert "training.optimizer.lr" in config["sweep"]
+    assert set(config["sweep"]["training.optimizer.kind"]) == {"gd", "adam"}
+
+
 # --- Smoke test del runner con formato digits en tmp_path ---
 
 
