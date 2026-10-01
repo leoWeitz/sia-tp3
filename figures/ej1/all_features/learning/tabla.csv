@@ -1,0 +1,5 @@
+experimento,modelo,entrenamiento,MSE train,mejora vs const.,MSE − MC,"fuera de [0,1]",neurona saturada,s/época,F1@0.5 (secund.)
+ej1_learning,lineal,gd η=0.1 · batch · 500 ép.,0.02606 ± 0,71.5 %,-3.47e-18,6.0 ± 0.0 %,—,0.000565,0.582 ± 0.000
+ej1_learning,logística,gd η=0.0001 · online · 500 ép.,0.01087 ± 7e-10,88.1 %,-1.52e-02,0.0 ± 0.0 %,6.9 ± 0.0 %,0.37,0.499 ± 0.000
+ej1_long,lineal,adam η=0.001 · mini-batch 32 · 2500 ép.,0.02623 ± 5e-05,71.3 %,+1.74e-04,6.1 ± 0.7 %,—,0.0126,0.587 ± 0.011
+ej1_long,logística,adam η=0.001 · mini-batch 32 · 2500 ép.,0.01089 ± 8e-06,88.1 %,-1.52e-02,0.0 ± 0.0 %,6.9 ± 0.0 %,0.0163,0.502 ± 0.003

@@ -205,3 +205,91 @@ Si CompanyX conoce su razón de costos, elige el umbral de esa curva. Todo sale 
 - 7 parámetros.
 - `model.npz` de 12.4 KiB, que es casi todo metadata (config y scaler); los pesos son 7 floats.
 - Infiere 100 000 transacciones en unos 10 ms en una notebook. El tiempo exacto varía entre corridas y máquinas; la figura muestra la mediana de 7 repeticiones.
+
+## C · Control: las 9 columnas contra las 6 elegidas en F09
+
+**Pregunta.** En F09 se descartaron `timestamp`, `device_screen_resolution` y `time_since_last_login_s` porque no tenían relación con el target (|ρ| < 0.03). Fue una decisión del grupo, no de la consigna. Esta sección la pone a prueba: se repiten **todos** los experimentos de A y B, incluidos el barrido completo y la lectura del TEST, con las 9 columnas.
+
+**Setup.**
+- Configs en `experiments/configs/ej1/all_features/`: son copias de las de A y B, con la misma grilla, las mismas semillas y los mismos folds. Lo único que cambia es `features` (las 9 columnas, crudas y con z-score) y `drop` (solo `flagged_fraud`).
+- Resultados en `results/ej1_all_features/`, con los mismos `run_name`.
+- Figuras en `figures/ej1/all_features/{learning,generalization}/`, con los mismos scripts: `python -m analysis.ej1_learning --results-dir results/ej1_all_features --out-dir figures/ej1/all_features/learning`, e idem `analysis.ej1_generalization`.
+- **Las corridas se hicieron en paralelo** (8 y 4 procesos). Las columnas de s/época no son comparables con las de A y B.
+- **Segunda lectura del TEST.** Se usaron los mismos índices (`results/ej1_split/test_idx.npy`, mismo sha256) en `results/ej1_all_features/ej1_final`. Es una decisión explícita del equipo para esta comparación. Ninguna decisión de A ni de B sale de ella: el modelo y el umbral recomendados siguen siendo los de B.
+
+### Aprendizaje (A con 9 columnas)
+
+| Modelo | MSE train, 6 col. | MSE train, 9 col. | Diferencia |
+|---|---|---|---|
+| Lineal: mínimos cuadrados (cota exacta) | 0.02612 | 0.02606 | −0.2 % |
+| Logística: GD online, η = 1e-4 | 0.01095 | 0.01087 | −0.7 % |
+| Logística: Adam, 2500 épocas | 0.01097 | 0.01089 | −0.7 % |
+
+- **Las conclusiones de A no cambian.** Las mejores configs son las mismas y el lineal sigue llegando exactamente a mínimos cuadrados. Los dos modelos se planchan antes de la época ~50. El lineal saca el 6.0 % de las salidas fuera de [0, 1] y la logística satura el 6.9 % de las neuronas. Las mismas 5 corridas divergen (lineal online con η = 0.1 y lineal sin normalizar).
+- **Sin normalizar es peor que antes.** La logística queda en 0.363 ± 0.085, contra 0.289 ± 0.13 con 6 columnas, porque `timestamp` crudo vale ~1.7·10⁹ y satura la neurona todavía más.
+- Agregar columnas solo puede bajar el error de entrenamiento: la cota de mínimos cuadrados con 9 columnas incluye a la de 6. Por eso lo relevante es la validación.
+
+### Generalización (B con 9 columnas)
+
+**Misma config, mismos folds** (comparación apareada en `ej1_cv`, 5 folds × 3 semillas):
+
+| Config | Val MSE, 9 − 6 col. | Relativo | Folds donde 9 col. es mejor |
+|---|---|---|---|
+| η = 3e-4, β = 1 | −6.2e-5 ± 5.2e-5 | −0.56 % | 14/15 |
+| η = 1e-3, β = 1 | −6.8e-5 ± 5.4e-5 | −0.61 % | 14/15 |
+| η = 1e-3, β = 2 | −7.3e-5 ± 5.6e-5 | −0.66 % | 13/15 |
+| η = 3e-3, β = 1 | −6.7e-5 ± 5.4e-5 | −0.60 % | 13/15 |
+
+- **Hay una mejora consistente, pero de 0.6 %.** Es 8 veces menor que la variación del val MSE entre folds (5.5e-4).
+- **Selección.** Con la misma regla (menor val MSE media), el CV elige η = 1e-3 y β = 2 (`results/ej1_all_features/ej1_cv/544d6eed`), con 0.01099 ± 0.00055. Las 6 configs siguen siendo equivalentes.
+- **Umbral.**
+  - El criterio F2 vuelve a dar **0.81**, con el mismo recall y las mismas alertas falsas en OOF: 0.948 contra 0.947, y 33.7 alertas falsas cada 1000 en los dos casos.
+  - Elegido fold por fold, da 0.80 ± 0.02 (entre 0.76 y 0.83).
+- **Partición y "mejor fold".** Llegan a las mismas conclusiones con los mismos números:
+  - k-fold con AP 0.954 ± 0.0007, contra 0.954 ± 0.0095 en holdout aleatorio;
+  - el mejor fold promete 0.01019 en su validación y da 0.01129 en el pseudo-test, contra 0.01133 de todo el resto.
+
+**TEST** (umbral 0.81; `results/ej1_all_features/ej1_final/final_eval.json`, 3 modelos):
+
+| Métrica | 6 col. (B) | 9 col. |
+|---|---|---|
+| MSE vs BigModel | 0.01055 | 0.01046 |
+| Precision | 0.772 ± 0.011 | 0.767 ± 0.004 |
+| Recall | 0.919 ± 0.012 | 0.938 ± 0.006 |
+| F2 | 0.885 ± 0.011 | 0.898 ± 0.005 |
+| AP | 0.944 ± 0.003 | 0.943 ± 0.001 |
+| Fraudes no detectados (de 176) | 14.3 | 11.0 |
+| Alertas falsas (de 1324) | 47.7 | 50.0 |
+| Errores cerca del corte (0.7–0.95) | 91 % | 90 % |
+| Parámetros | 7 | 10 |
+
+- La diferencia en recall son **3 fraudes de 176**.
+- En validación (OOF, 6000 filas × 3 semillas) el recall con el mismo umbral es idéntico. La diferencia del TEST corresponde a la variación de un conjunto de 1500 filas, no a una mejora del modelo.
+- El AP, que no depende del umbral, es el mismo.
+
+### Qué aprende el modelo de las columnas nuevas
+
+Pesos del modelo final (media de 3 semillas, entradas en z-score). Con 9 columnas β = 2, así que el peso efectivo es el doble del que se muestra; comparado así, las 6 columnas compartidas aprenden lo mismo que en B (por ejemplo, `amount_usd`: 2 × 0.393 = 0.786, contra 0.783).
+
+| Columna | Peso (9 col.) |
+|---|---|
+| `amount_usd` | +0.393 |
+| `quantity_purchased` | +0.199 |
+| `account_age_days` | −0.158 |
+| `days_since_last_purchase` | −0.136 |
+| `session_duration_seconds` | −0.110 |
+| `items_viewed_before_purchase` | −0.032 |
+| `device_screen_resolution` | +0.015 ± 0.004 |
+| `timestamp` | −0.003 ± 0.002 |
+| `time_since_last_login_s` | +0.001 ± 0.003 |
+
+- **El modelo ignora `timestamp` y `time_since_last_login_s`:** sus pesos no se distinguen de cero.
+- **`device_screen_resolution` recibe un peso chico pero estable**, 10 a 25 veces menor que el de las features útiles. Es la única candidata a explicar la mejora de 0.6 %. Es coherente con la EDA, donde la tasa de fraude va de 10.5 % a 12.9 % según la resolución. No se verificó con un experimento.
+
+### Conclusión
+
+**Se mantiene la decisión de F09 (6 columnas).**
+1. Las 9 columnas mejoran el val MSE un 0.6 %. No cambian ninguna conclusión de A ni de B, ni el umbral, ni las métricas en OOF.
+2. Las columnas descartadas reciben un peso ~0: el modelo confirma por sí solo lo que mostró la EDA.
+3. El modelo sigue siendo tiny en los dos casos (7 contra 10 parámetros), pero sin normalizar el `timestamp` crudo empeora la saturación.
+4. **El `timestamp` tiene un riesgo que esta comparación no mide.** El TEST y los folds se arman al azar, así que todas las fechas de validación caen dentro del rango de entrenamiento. En producción, las transacciones nuevas son posteriores, y el z-score del `timestamp` crece sin límite. Con un peso de −0.003 el efecto es chico, pero no aporta nada y solo puede empeorar con el tiempo.
