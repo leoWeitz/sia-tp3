@@ -1,0 +1,102 @@
+{
+  "run_name": "ej1_cv",
+  "seed": 0,
+  "fold": 3,
+  "trainer": "backprop",
+  "dataset": {
+    "name": "fraud_dataset",
+    "format": "tabular",
+    "path": "datasets/fraud_dataset.csv",
+    "synthetic": null,
+    "target": "big_model_fraud_probability",
+    "features": [
+      "timestamp",
+      "amount_usd",
+      "quantity_purchased",
+      "session_duration_seconds",
+      "days_since_last_purchase",
+      "account_age_days",
+      "device_screen_resolution",
+      "time_since_last_login_s",
+      "items_viewed_before_purchase"
+    ],
+    "drop": [
+      "flagged_fraud"
+    ],
+    "categorical": [],
+    "na_policy": "error",
+    "task": "regression",
+    "n_classes": null,
+    "normalize": "zscore",
+    "feature_range": null,
+    "target_encoding": "none",
+    "target_in_range": null,
+    "split": {
+      "kind": "kfold",
+      "k": 5,
+      "stratified": true,
+      "seed": null
+    },
+    "holdout_test": {
+      "ratio": 0.2,
+      "seed": 0,
+      "stratified": true,
+      "indices_path": "results/ej1_split/test_idx.npy"
+    },
+    "test_path": null
+  },
+  "model": {
+    "layers": [
+      "auto",
+      1
+    ],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier",
+    "init_params": {}
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.003
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "l2": 0.0,
+    "augmentation": null,
+    "early_stopping": {
+      "patience": 30,
+      "monitor": "val_loss",
+      "mode": "min",
+      "min_delta": 0.0,
+      "restore_best": true
+    },
+    "adaptive_eta": null
+  },
+  "metrics": [
+    "mse",
+    "mae"
+  ],
+  "logging": {
+    "every": 50,
+    "save_model": true,
+    "save_predictions": true,
+    "checkpoint_every": 0,
+    "save_weights_history": false
+  },
+  "sweep": {
+    "training.optimizer.lr": [
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "model.beta": [
+      1.0,
+      2.0
+    ]
+  },
+  "selected_from": null,
+  "final": null
+}

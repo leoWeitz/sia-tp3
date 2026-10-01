@@ -1,0 +1,78 @@
+{
+  "run_name": "ej1_final",
+  "mode": "retrain",
+  "selected_from": "results/ej1_all_features/ej1_cv/544d6eed",
+  "selected_runs": [
+    "544d6eed_s0_f0",
+    "544d6eed_s0_f1",
+    "544d6eed_s0_f2",
+    "544d6eed_s0_f3",
+    "544d6eed_s0_f4",
+    "544d6eed_s1_f0",
+    "544d6eed_s1_f1",
+    "544d6eed_s1_f2",
+    "544d6eed_s1_f3",
+    "544d6eed_s1_f4",
+    "544d6eed_s2_f0",
+    "544d6eed_s2_f1",
+    "544d6eed_s2_f2",
+    "544d6eed_s2_f3",
+    "544d6eed_s2_f4"
+  ],
+  "epochs": 25,
+  "threshold": null,
+  "test": {
+    "source": "holdout_test",
+    "path": "datasets/fraud_dataset.csv",
+    "sha256": "0e0d2fdf7e6c294b7b8ea2e80452a270f1fad1de02edee9cc25f6eec2ab4c707",
+    "indices_path": "results/ej1_split/test_idx.npy",
+    "n": 1500
+  },
+  "n_models": 3,
+  "mean": {
+    "loss": 0.01045695277925414,
+    "mse": 0.01045695277925414,
+    "mae": 0.07540863495382773,
+    "rmse": 0.10225918774252114
+  },
+  "std": {
+    "loss": 2.6631213282096065e-05,
+    "mse": 2.6631213282096065e-05,
+    "mae": 0.00011983724088136749,
+    "rmse": 0.00013020077162717524
+  },
+  "models": [
+    {
+      "label": "s0",
+      "model": "results/ej1_all_features/ej1_final/final_s0/model.npz",
+      "test": {
+        "loss": 0.010431912455399957,
+        "mse": 0.010431912455399957,
+        "mae": 0.07547598595887899,
+        "rmse": 0.10213673411363787
+      }
+    },
+    {
+      "label": "s1",
+      "model": "results/ej1_all_features/ej1_final/final_s1/model.npz",
+      "test": {
+        "loss": 0.010484931212651054,
+        "mse": 0.010484931212651054,
+        "mae": 0.07527027494485058,
+        "rmse": 0.10239595310680523
+      }
+    },
+    {
+      "label": "s2",
+      "model": "results/ej1_all_features/ej1_final/final_s2/model.npz",
+      "test": {
+        "loss": 0.010454014669711414,
+        "mse": 0.010454014669711414,
+        "mae": 0.07547964395775363,
+        "rmse": 0.10224487600712034
+      }
+    }
+  ],
+  "git_commit": "45a2918",
+  "timestamp": "2026-10-01T11:26:15"
+}
