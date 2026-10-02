@@ -41,7 +41,7 @@ Esta carpeta es la **fuente de verdad** para lo que falta implementar. El motor 
 | F08 | [Validación](fases/F08-validacion.md) | F07 (solo figuras) | ✅ Hecho · falta T3 (verificación en papel) |
 | F09 | [Ej1 · EDA fraude](fases/F09-ej1-eda.md) | — (solo pandas) | ✅ Hecho · falta revisión del equipo de la decisión de features |
 | F10 | [Ej1 · Aprendizaje](fases/F10-ej1-aprendizaje.md) | F07, F09 | ✅ Hecho · `ej1_beta`/`ej1_scaling` con GD batch (ver `resultados/ej1.md`) |
-| F11 | [Ej1 · Generalización y umbral](fases/F11-ej1-generalizacion.md) | F10 | ✅ Hecho · umbral recomendado 0.81 (F2), ver `resultados/ej1.md` §B |
+| F11 | [Ej1 · Generalización y umbral](fases/F11-ej1-generalizacion.md) | F10 | ✅ Hecho · estudio principal con las 9 columnas, control con las 6 de F09 · se recomienda el modelo de 6 con umbral 0.81 (F2), ver `resultados/ej1.md` §B y §C |
 | F12 | [Ej2 · Dígitos](fases/F12-ej2-digitos.md) | Parte 1 (EDA): — · resto: F07 | ⏳ |
 | F13 | [Ej3 · More digits ≥ 98 %](fases/F13-ej3-more-digits.md) | F12 | ⏳ |
 | F14 | [Análisis y figuras](fases/F14-analisis.md) | F10–F13 | ⏳ |

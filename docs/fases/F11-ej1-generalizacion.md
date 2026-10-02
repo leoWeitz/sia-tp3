@@ -68,6 +68,7 @@ Si existen etiqueta real **y** probabilidad de BigModel: comparar TinyModel vs B
 
 ## Criterios de aceptación
 - [x] TEST generado una sola vez y nunca usado fuera de `ej1_final` (verificable en los logs).
+  - *Nota:* los índices se generaron una sola vez, pero el TEST se leyó **dos veces**, siempre con `--final-eval` y en corridas `ej1_final`: `results/ej1_final` (6 columnas) y `results/ej1_all_features/ej1_final` (9 columnas). La segunda lectura fue una decisión explícita del equipo para comparar las dos versiones, y ninguna decisión sale de ella (`docs/resultados/ej1.md`, B y C.0).
 - [x] Figuras 1–7 por script.
 - [x] `docs/resultados/ej1.md` sección B completa.
 - [x] Criterio de umbral recomendado justificado en `docs/resultados/ej1.md`.
