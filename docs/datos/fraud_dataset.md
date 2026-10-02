@@ -59,6 +59,18 @@ Ninguna: `na_policy: "error"`, que no se dispara porque no hay NaN. No se filtra
 
 ## Features finales (nombres exactos para la config)
 
+**Estudio principal: las 9 columnas.** Se usan todas, salvo el target y la etiqueta. Las configs están en `experiments/configs/ej1/all_features/`.
+
+```json
+"features": ["timestamp", "amount_usd", "quantity_purchased", "session_duration_seconds",
+             "days_since_last_purchase", "account_age_days", "device_screen_resolution",
+             "time_since_last_login_s", "items_viewed_before_purchase"],
+"drop": ["flagged_fraud"],
+"categorical": []
+```
+
+**Control: la selección de 6 columnas de esta EDA.** Sigue documentada y corrida completa, y es la del modelo que se recomienda a CompanyX (`docs/resultados/ej1.md`, B-c y C).
+
 ```json
 "features": ["amount_usd", "quantity_purchased", "session_duration_seconds",
              "days_since_last_purchase", "account_age_days", "items_viewed_before_purchase"],
@@ -66,7 +78,9 @@ Ninguna: `na_policy: "error"`, que no se dispara porque no hay NaN. No se filtra
 "categorical": []
 ```
 
-La config está en `experiments/configs/ej1/base.json`, con `split: none` (R-01: el estudio de aprendizaje usa todas las muestras), salida `sigmoid` (R-05), MSE y `normalize: "zscore"`.
+> **Nota.** La columna "Decisión" de la tabla de arriba y la respuesta 5 registran la selección original de esta EDA. El análisis sigue vigente: las 3 columnas descartadas no tienen relación con el target. Lo que cambió es que el equipo decidió hacer el estudio principal con las 9 columnas y dejar la selección de 6 como control. El resultado confirma la EDA: el modelo de 9 columnas les da un peso ~0 a esas 3, y las dos versiones rinden igual en validación (`docs/resultados/ej1.md`, C.0).
+
+La config de referencia del control está en `experiments/configs/ej1/base.json`, con `split: none` (R-01: el estudio de aprendizaje usa todas las muestras), salida `sigmoid` (R-05), MSE y `normalize: "zscore"`. Las configs del estudio principal usan los mismos valores.
 
 **Normalización por defecto: z-score.**
 
@@ -74,7 +88,7 @@ La config está en `experiments/configs/ej1/base.json`, con `split: none` (R-01:
 - En contra: el monto máximo queda en z ≈ 12, pero es una sola muestra, y lo va a absorber un peso chico.
 - F10 compara igual `none`, `minmax` y `zscore` en `ej1_scaling`.
 
-Índices del test del Ej1 (`results/ej1_split/test_idx.npy`) y su hash: los genera y anota F11.
+Índices del test del Ej1: `results/ej1_split/test_idx.npy` (F11). Son 1500 filas, 20 % estratificado por deciles de la probabilidad, `holdout_test.seed = 0`, con 11.73 % de fraude. Los genera el runner en la primera corrida con `holdout_test`, de forma determinística. sha256 del `.npy`: `9e711725e86c18460503685baaf37c87ad5c46e742a5971da5fa33a489943bcc`.
 
 ## Observaciones para modelado
 

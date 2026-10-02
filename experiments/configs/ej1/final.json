@@ -1,0 +1,76 @@
+{
+  "run_name": "ej1_final",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "dataset": {
+    "name": "fraud_dataset",
+    "path": "datasets/fraud_dataset.csv",
+    "target": "big_model_fraud_probability",
+    "features": [
+      "amount_usd",
+      "quantity_purchased",
+      "session_duration_seconds",
+      "days_since_last_purchase",
+      "account_age_days",
+      "items_viewed_before_purchase"
+    ],
+    "drop": [
+      "flagged_fraud",
+      "timestamp",
+      "device_screen_resolution",
+      "time_since_last_login_s"
+    ],
+    "categorical": [],
+    "task": "regression",
+    "normalize": "zscore",
+    "target_encoding": "none",
+    "split": {
+      "kind": "kfold",
+      "k": 5,
+      "stratified": true
+    },
+    "holdout_test": {
+      "ratio": 0.2,
+      "seed": 0,
+      "stratified": true,
+      "indices_path": "results/ej1_split/test_idx.npy"
+    }
+  },
+  "model": {
+    "layers": [
+      "auto",
+      1
+    ],
+    "output_activation": "sigmoid",
+    "beta": 1.0
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.003
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "early_stopping": {
+      "patience": 30,
+      "monitor": "val_loss"
+    }
+  },
+  "metrics": [
+    "mse",
+    "mae"
+  ],
+  "logging": {
+    "every": 50,
+    "save_predictions": true,
+    "checkpoint_every": 0
+  },
+  "selected_from": "results/ej1_cv/be30e672",
+  "final": {
+    "mode": "retrain"
+  }
+}
