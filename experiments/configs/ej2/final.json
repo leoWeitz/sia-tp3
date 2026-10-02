@@ -1,0 +1,39 @@
+{
+  "run_name": "ej2_final",
+  "seeds": [0, 1, 2],
+  "dataset": {
+    "name": "digits",
+    "format": "digits",
+    "path": "datasets/digits.csv",
+    "test_path": "datasets/digits_test.csv",
+    "normalize": "none",
+    "target_encoding": "onehot",
+    "n_classes": 10
+  },
+  "model": {
+    "layers": [784, 128, 10],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier"
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.001
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "augmentation": {
+      "kind": "random_shift",
+      "max_px": 2
+    }
+  },
+  "metrics": ["accuracy", "macro_f1"],
+  "logging": {
+    "save_model": true,
+    "save_predictions": true
+  },
+  "selected_from": "results/ej2_extra_augmentation/f5f0383c"
+}

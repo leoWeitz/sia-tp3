@@ -1,0 +1,39 @@
+{
+  "run_name": "ej3_final",
+  "seeds": [0, 1, 2, 3, 4],
+  "dataset": {
+    "name": "digits_union",
+    "format": "digits",
+    "path": "datasets/digits_union.csv",
+    "test_path": "datasets/digits_test.csv",
+    "normalize": "none",
+    "target_encoding": "onehot",
+    "n_classes": 10
+  },
+  "model": {
+    "layers": [784, 256, 128, 10],
+    "hidden_activation": "relu",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "he"
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.001
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "augmentation": {
+      "kind": "random_shift",
+      "max_px": 1
+    }
+  },
+  "metrics": ["accuracy", "macro_f1"],
+  "logging": {
+    "save_model": true,
+    "save_predictions": true
+  },
+  "selected_from": "results/ej3_best/21ef8017"
+}
