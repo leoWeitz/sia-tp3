@@ -55,7 +55,7 @@ select_threshold(sweep_df, criterion: Literal["f1", "f2", "youden", "cost", "pre
 - [x] `auc_trapezoid`: scores perfectos → 1.0; invertidos → 0.0; constantes → 0.5; un caso chico a mano.
 - [x] `threshold_sweep`: en t = 0 recall = 1; en t > max(score) recall = 0.
 - [x] `select_threshold("cost")` con `cost_fn ≫ cost_fp` elige un umbral ≤ que con costos iguales.
-- [x] (Opcional) oráculo contra `sklearn.metrics` en datos aleatorios, solo en `tests/`.
+- [x] Oráculo de referencia independiente en NumPy puro (sin dependencias externas) en datos aleatorios, solo en `tests/`.
 
 ## Entregables
 Rama `f06-metricas` lista para PR. El agente propone los mensajes de commit (`feat(F06): ...`) y no commitea sin permiso (`CLAUDE.md` §0).

@@ -391,34 +391,86 @@ def test_select_threshold_precision_at_recall():
         select_threshold(df, "accuracy")
 
 
-# --- Oráculo: sklearn (opcional, solo en tests) ---
+# --- Oráculo: implementación de referencia independiente en NumPy puro ---
 
 
-def test_oraculo_sklearn():
-    skm = pytest.importorskip("sklearn.metrics")
+def _oracle_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> np.ndarray:
+    cm = np.zeros((n_classes, n_classes), dtype=int)
+    for t, p in zip(y_true, y_pred, strict=True):
+        cm[t, p] += 1
+    return cm
+
+
+def _oracle_per_class_f1(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> float:
+    f1s = []
+    for c in range(n_classes):
+        tp = int(np.sum((y_true == c) & (y_pred == c)))
+        fp = int(np.sum((y_true != c) & (y_pred == c)))
+        fn = int(np.sum((y_true == c) & (y_pred != c)))
+        p = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        r = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (2 * p * r) / (p + r) if (p + r) > 0 else 0.0
+        f1s.append(f1)
+    return float(np.mean(f1s))
+
+
+def _oracle_binary_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, beta: float = 2.0
+) -> tuple[float, float, float]:
+    tp = int(np.sum((y_true == 1) & (y_pred == 1)))
+    fp = int(np.sum((y_true == 0) & (y_pred == 1)))
+    fn = int(np.sum((y_true == 1) & (y_pred == 0)))
+    prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    b2 = beta**2
+    denom = (1 + b2) * tp + b2 * fn + fp
+    fb = (1 + b2) * tp / denom if denom > 0 else 0.0
+    return prec, rec, fb
+
+
+def _oracle_roc_auc(y_true: np.ndarray, scores: np.ndarray) -> float:
+    pos_scores = scores[y_true == 1]
+    neg_scores = scores[y_true == 0]
+    gt = np.sum(pos_scores[:, None] > neg_scores[None, :])
+    eq = np.sum(pos_scores[:, None] == neg_scores[None, :])
+    return float((gt + 0.5 * eq) / (len(pos_scores) * len(neg_scores)))
+
+
+def _oracle_average_precision(y_true: np.ndarray, scores: np.ndarray) -> float:
+    unique_scores = np.sort(np.unique(scores))[::-1]
+    n_pos = int(np.sum(y_true == 1))
+    ap = 0.0
+    prev_rec = 0.0
+    for s in unique_scores:
+        pred_pos = scores >= s
+        tp = int(np.sum((y_true == 1) & pred_pos))
+        fp = int(np.sum((y_true == 0) & pred_pos))
+        rec = tp / n_pos
+        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        ap += (rec - prev_rec) * prec
+        prev_rec = rec
+    return float(ap)
+
+
+def test_oraculo_numpy():
     r = rng(7)
     for _ in range(5):
         y_true = r.integers(0, 4, size=80)
         y_pred = np.where(r.uniform(size=80) < 0.6, y_true, r.integers(0, 4, size=80))
         np.testing.assert_array_equal(
             confusion_matrix(y_true, y_pred, 4),
-            skm.confusion_matrix(y_true, y_pred, labels=range(4)),
+            _oracle_confusion_matrix(y_true, y_pred, 4),
         )
         report = per_class_report(y_true, y_pred, 4)
-        assert macro(report, "f1") == pytest.approx(
-            skm.f1_score(y_true, y_pred, average="macro", zero_division=0)
-        )
+        assert macro(report, "f1") == pytest.approx(_oracle_per_class_f1(y_true, y_pred, 4))
         yb, pb = (y_true == 1).astype(int), (y_pred == 1).astype(int)
-        assert precision(yb, pb) == pytest.approx(skm.precision_score(yb, pb, zero_division=0))
-        assert recall(yb, pb) == pytest.approx(skm.recall_score(yb, pb, zero_division=0))
-        assert fbeta(yb, pb, 2.0) == pytest.approx(
-            skm.fbeta_score(yb, pb, beta=2.0, zero_division=0)
-        )
+        exp_prec, exp_rec, exp_f2 = _oracle_binary_metrics(yb, pb, beta=2.0)
+        assert precision(yb, pb) == pytest.approx(exp_prec)
+        assert recall(yb, pb) == pytest.approx(exp_rec)
+        assert fbeta(yb, pb, 2.0) == pytest.approx(exp_f2)
 
         scores = np.round(r.uniform(size=80), 2)  # con empates
         assert auc_trapezoid(*roc_curve(yb, scores)[:2]) == pytest.approx(
-            skm.roc_auc_score(yb, scores)
+            _oracle_roc_auc(yb, scores)
         )
-        assert average_precision(yb, scores) == pytest.approx(
-            skm.average_precision_score(yb, scores)
-        )
+        assert average_precision(yb, scores) == pytest.approx(_oracle_average_precision(yb, scores))
