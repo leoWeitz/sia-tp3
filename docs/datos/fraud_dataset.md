@@ -74,7 +74,7 @@ La config está en `experiments/configs/ej1/base.json`, con `split: none` (R-01:
 - En contra: el monto máximo queda en z ≈ 12, pero es una sola muestra, y lo va a absorber un peso chico.
 - F10 compara igual `none`, `minmax` y `zscore` en `ej1_scaling`.
 
-Índices del test del Ej1 (`results/ej1_split/test_idx.npy`) y su hash: los genera y anota F11.
+Índices del test del Ej1: `results/ej1_split/test_idx.npy` (F11). Son 1500 filas, 20 % estratificado por deciles de la probabilidad, `holdout_test.seed = 0`, con 11.73 % de fraude. Los genera el runner en la primera corrida con `holdout_test`, de forma determinística. sha256 del `.npy`: `9e711725e86c18460503685baaf37c87ad5c46e742a5971da5fa33a489943bcc`.
 
 ## Observaciones para modelado
 
