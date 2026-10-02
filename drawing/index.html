@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reconocimiento de Dígitos en Vivo · SIA TP3</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #22c55e;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 2rem 1rem; display: flex; justify-content: center; }
+    .container { max-width: 900px; width: 100%; display: flex; flex-direction: column; gap: 1.5rem; }
+    header { text-align: center; }
+    h1 { font-size: 1.8rem; font-weight: 700; color: var(--primary); margin-bottom: 0.3rem; }
+    p.subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+    .selector-bar {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;
+    }
+    .select-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 250px; }
+    label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
+    select {
+      background: #0b1120; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.95rem; outline: none; cursor: pointer;
+    }
+    select:focus { border-color: var(--primary); }
+
+    .main-grid { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .canvas-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem;
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+    }
+    .canvases-wrapper { display: flex; gap: 1.5rem; align-items: center; }
+    .canvas-box { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+    .canvas-box span { font-size: 0.8rem; color: var(--text-muted); }
+
+    canvas#zoomedCanvas {
+      width: 336px; height: 336px; background: #000; border: 2px solid var(--border);
+      border-radius: 8px; cursor: crosshair; image-rendering: pixelated; touch-action: none;
+    }
+    canvas#rawCanvas, canvas#centeredCanvas {
+      width: 28px; height: 28px; background: #000; border: 1px solid var(--border);
+      image-rendering: pixelated;
+    }
+
+    .tools-row { display: flex; gap: 0.6rem; width: 100%; justify-content: center; flex-wrap: wrap; }
+    button {
+      background: #334155; color: var(--text); border: none; border-radius: 8px;
+      padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 0.4rem; transition: background 0.15s;
+    }
+    button:hover { background: #475569; }
+    button.primary { background: var(--primary); color: #0f172a; }
+    button.primary:hover { background: var(--primary-hover); }
+
+    .toggle-label {
+      font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center;
+      gap: 0.4rem; cursor: pointer; user-select: none;
+    }
+    .toggle-label input { cursor: pointer; accent-color: var(--primary); }
+
+    .results-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 1.2rem;
+    }
+    .prediction-header {
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); padding-bottom: 1rem;
+    }
+    .pred-badge { display: flex; align-items: baseline; gap: 0.6rem; }
+    .pred-number { font-size: 3.5rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .pred-label { font-size: 1.1rem; color: var(--text-muted); }
+    .pred-confidence { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+
+    .bars-container { display: flex; flex-direction: column; gap: 0.4rem; }
+    .bar-row { display: flex; align-items: center; gap: 0.8rem; font-size: 0.85rem; }
+    .digit-tag { width: 18px; font-weight: 700; text-align: right; color: var(--text); }
+    .progress-track {
+      flex: 1; height: 18px; background: #0b1120; border-radius: 4px; overflow: hidden;
+      border: 1px solid #1e293b; position: relative;
+    }
+    .progress-fill { height: 100%; background: #334155; transition: width 0.1s ease, background 0.2s; }
+    .progress-fill.winner { background: var(--accent); }
+    .bar-val { width: 45px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Clasificador de Dígitos en Tiempo Real</h1>
+      <p class="subtitle">Dibujá directamente sobre la matriz de 28×28 y observá la inferencia de la red</p>
+    </header>
+
+    <div class="selector-bar">
+      <div class="select-group">
+        <label for="modelSelect">Modelo Activo</label>
+        <select id="modelSelect">
+          <option value="ej3_best" selected>Ej3 Best (ReLU [784, 256, 128, 10] · Acc Test 98.36%)</option>
+          <option value="ej2_best">Ej2 Best (Tanh [784, 128, 10] · Acc Test 88.31% · Sin 8s)</option>
+        </select>
+      </div>
+      <label class="toggle-label">
+        <input type="checkbox" id="autocenterCheck" checked>
+        Auto-Centrado (Centro de Masa)
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="gridCheck" checked>
+        Grilla 28×28
+      </label>
+    </div>
+
+    <div class="main-grid">
+      <div class="canvas-card">
+        <div class="canvases-wrapper">
+          <div class="canvas-box">
+            <canvas id="zoomedCanvas" width="336" height="336"></canvas>
+            <span>Matriz 28×28 (Zoom 12x)</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="canvas-box">
+              <canvas id="rawCanvas" width="28" height="28"></canvas>
+              <span>1:1 Real</span>
+            </div>
+            <div class="canvas-box">
+              <canvas id="centeredCanvas" width="28" height="28"></canvas>
+              <span>Centrado</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tools-row">
+          <button id="clearBtn">🧹 Limpiar</button>
+          <button id="brushThick" class="primary">🖌 Pincel Normal</button>
+          <button id="brushFine">✏ Pincel Fino</button>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <div class="prediction-header">
+          <div class="pred-badge">
+            <span class="pred-number" id="predDigit">-</span>
+            <span class="pred-label">Predicción</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Confianza</div>
+            <span class="pred-confidence" id="predConf">0.0%</span>
+          </div>
+        </div>
+
+        <div class="bars-container" id="barsContainer">
+          <!-- 10 filas para los dígitos 0 a 9 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GRID_SIZE = 28;
+    const PIXEL_SCALE = 12; // 28 * 12 = 336 px
+    const matrix = new Float32Array(GRID_SIZE * GRID_SIZE);
+
+    const zoomedCanvas = document.getElementById('zoomedCanvas');
+    const zCtx = zoomedCanvas.getContext('2d');
+    const rawCanvas = document.getElementById('rawCanvas');
+    const rCtx = rawCanvas.getContext('2d');
+    const centeredCanvas = document.getElementById('centeredCanvas');
+    const cCtx = centeredCanvas.getContext('2d');
+
+    const predDigit = document.getElementById('predDigit');
+    const predConf = document.getElementById('predConf');
+    const barsContainer = document.getElementById('barsContainer');
+    const modelSelect = document.getElementById('modelSelect');
+    const autocenterCheck = document.getElementById('autocenterCheck');
+    const gridCheck = document.getElementById('gridCheck');
+    const clearBtn = document.getElementById('clearBtn');
+    const brushThick = document.getElementById('brushThick');
+    const brushFine = document.getElementById('brushFine');
+
+    let isDrawing = false;
+    let brushRadius = 1.0;
+    let debounceTimer = null;
+
+    // Crear las 10 barras
+    for (let i = 0; i < 10; i++) {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <span class="digit-tag">${i}</span>
+        <div class="progress-track"><div class="progress-fill" id="bar-${i}"></div></div>
+        <span class="bar-val" id="val-${i}">0.0%</span>
+      `;
+      barsContainer.appendChild(row);
+    }
+
+    function renderCanvases() {
+      // 1. Raw 28x28
+      const rawImg = rCtx.createImageData(GRID_SIZE, GRID_SIZE);
+      for (let i = 0; i < matrix.length; i++) {
+        const v = Math.min(255, Math.floor(matrix[i] * 255));
+        rawImg.data[i * 4] = v;
+        rawImg.data[i * 4 + 1] = v;
+        rawImg.data[i * 4 + 2] = v;
+        rawImg.data[i * 4 + 3] = 255;
+      }
+      rCtx.putImageData(rawImg, 0, 0);
+
+      // 2. Zoomed 336x336
+      zCtx.fillStyle = '#000000';
+      zCtx.fillRect(0, 0, 336, 336);
+
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const val = matrix[y * GRID_SIZE + x];
+          if (val > 0) {
+            const v = Math.min(255, Math.floor(val * 255));
+            zCtx.fillStyle = `rgb(${v}, ${v}, ${v})`;
+            zCtx.fillRect(x * PIXEL_SCALE, y * PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
+          }
+        }
+      }
+
+      // Grilla sutil si está activada
+      if (gridCheck.checked) {
+        zCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        zCtx.lineWidth = 1;
+        for (let i = 0; i <= GRID_SIZE; i++) {
+          zCtx.beginPath();
+          zCtx.moveTo(i * PIXEL_SCALE, 0);
+          zCtx.lineTo(i * PIXEL_SCALE, 336);
+          zCtx.stroke();
+          zCtx.beginPath();
+          zCtx.moveTo(0, i * PIXEL_SCALE);
+          zCtx.lineTo(336, i * PIXEL_SCALE);
+          zCtx.stroke();
+        }
+      }
+    }
+
+    function paintPixel(gx, gy, pressure = 1.0) {
+      if (brushRadius <= 0.5) {
+        if (gx >= 0 && gx < GRID_SIZE && gy >= 0 && gy < GRID_SIZE) {
+          matrix[gy * GRID_SIZE + gx] = Math.min(1.0, matrix[gy * GRID_SIZE + gx] + 0.9 * pressure);
+        }
+      } else {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = gx + dx;
+            const ny = gy + dy;
+            if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const factor = Math.max(0, 1.0 - dist / 1.4);
+              if (factor > 0) {
+                const idx = ny * GRID_SIZE + nx;
+                matrix[idx] = Math.min(1.0, matrix[idx] + factor * 0.85 * pressure);
+              }
+            }
+          }
+        }
+      }
+      renderCanvases();
+      schedulePredict();
+    }
+
+    function handlePointer(e) {
+      const rect = zoomedCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      const gx = Math.floor(px / PIXEL_SCALE);
+      const gy = Math.floor(py / PIXEL_SCALE);
+      paintPixel(gx, gy);
+    }
+
+    zoomedCanvas.addEventListener('mousedown', (e) => { isDrawing = true; handlePointer(e); });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+    zoomedCanvas.addEventListener('mousemove', (e) => { if (isDrawing) handlePointer(e); });
+
+    zoomedCanvas.addEventListener('touchstart', (e) => {
+      isDrawing = true; handlePointer(e); e.preventDefault();
+    });
+    window.addEventListener('touchend', () => { isDrawing = false; });
+    zoomedCanvas.addEventListener('touchmove', (e) => {
+      if (isDrawing) handlePointer(e); e.preventDefault();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      matrix.fill(0);
+      renderCanvases();
+      cCtx.fillStyle = '#000';
+      cCtx.fillRect(0, 0, 28, 28);
+      predDigit.textContent = '-';
+      predConf.textContent = '0.0%';
+      for (let i = 0; i < 10; i++) {
+        document.getElementById(`bar-${i}`).style.width = '0%';
+        document.getElementById(`bar-${i}`).classList.remove('winner');
+        document.getElementById(`val-${i}`).textContent = '0.0%';
+      }
+    });
+
+    brushThick.addEventListener('click', () => {
+      brushRadius = 1.0;
+      brushThick.classList.add('primary');
+      brushFine.classList.remove('primary');
+    });
+    brushFine.addEventListener('click', () => {
+      brushRadius = 0.4;
+      brushFine.classList.add('primary');
+      brushThick.classList.remove('primary');
+    });
+
+    gridCheck.addEventListener('change', renderCanvases);
+    autocenterCheck.addEventListener('change', schedulePredict);
+    modelSelect.addEventListener('change', schedulePredict);
+
+    function schedulePredict() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(predict, 50);
+    }
+
+    async function predict() {
+      let hasInk = false;
+      for (let i = 0; i < matrix.length; i++) {
+        if (matrix[i] > 0.05) { hasInk = true; break; }
+      }
+      if (!hasInk) return;
+
+      const payload = {
+        model: modelSelect.value,
+        pixels: Array.from(matrix),
+        autocenter: autocenterCheck.checked,
+      };
+
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.error) {
+          console.error(data.error);
+          return;
+        }
+
+        if (data.centered_pixels) {
+          const cImg = cCtx.createImageData(GRID_SIZE, GRID_SIZE);
+          for (let i = 0; i < data.centered_pixels.length; i++) {
+            const v = Math.min(255, Math.floor(data.centered_pixels[i] * 255));
+            cImg.data[i * 4] = v;
+            cImg.data[i * 4 + 1] = v;
+            cImg.data[i * 4 + 2] = v;
+            cImg.data[i * 4 + 3] = 255;
+          }
+          cCtx.putImageData(cImg, 0, 0);
+        }
+
+        predDigit.textContent = data.prediction;
+        predConf.textContent = (data.confidence * 100).toFixed(1) + '%';
+
+        for (let i = 0; i < 10; i++) {
+          const pct = Math.max(0, Math.min(100, (data.scores[i] * 100))).toFixed(1);
+          const bar = document.getElementById(`bar-${i}`);
+          bar.style.width = pct + '%';
+          if (i === data.prediction) {
+            bar.classList.add('winner');
+          } else {
+            bar.classList.remove('winner');
+          }
+          document.getElementById(`val-${i}`).textContent = pct + '%';
+        }
+      } catch (err) {
+        console.error('Error al predecir:', err);
+      }
+    }
+
+    renderCanvases();
+  </script>
+</body>
+</html>
