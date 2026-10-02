@@ -836,6 +836,6 @@
     "n_params": 10,
     "bytes": 12866,
     "rows": 100000,
-    "seconds_median": 0.01388901099562645
+    "seconds_median": 0.007183620997238904
   }
 }
