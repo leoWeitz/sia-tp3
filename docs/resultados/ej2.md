@@ -34,16 +34,30 @@ Figura de referencia: `figures/ej2/E2-01_evaluation_protocol.png`.
 
 Se exploraron sistemáticamente los factores de aprendizaje, arquitectura y regularización partiendo de la configuración canónica de la cátedra (`[784, 64, 10]`, $\tanh$ oculta, sigmoide de salida + MSE, Xavier init, batch 32).
 
-### 1. Tasa de Aprendizaje y Optimizadores (SGD vs Adam)
+### 1. Tasa de Aprendizaje y Optimizadores
 
-Resultados en `results/ej2_lr/summary.csv` y Figura `figures/ej2/E2-02_lr_optimizer.png`:
+Barrido de $\eta$ para SGD y Adam en `results/ej2_lr/summary.csv` (Figura `figures/ej2/E2-02_lr_optimizer.png`); mini-barridos de Momentum y RMSProp en `results/ej2_opt/summary.csv` y de SGD con $\eta$ adaptativo en `results/ej2_eta_adapt/summary.csv`. Todos comparten red, datos, lote, early stopping y semillas; solo cambia el mecanismo de optimización.
 
-| Optimizador | Mejor $\eta$ | Val Accuracy | Val Loss (MSE) | Macro F1 | Época de parada |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **SGD Mini-batch (32)** | $0.3$ | 95.65% $\pm$ 0.13% | $0.00767 \pm 0.00018$ | $0.8465 \pm 0.0022$ | ~190 |
-| **Adam** | **$0.001$** | **96.08% $\pm$ 0.30%** | **$0.00690 \pm 0.00021$** | **$0.8532 \pm 0.0037$** | **~45** |
+Mejor configuración de cada mecanismo (mayor exactitud media de validación entre los valores probados), Figura `figures/ej2/E2-02b_optimizers.png`:
 
-- **Conclusión:** Adam converge **4 veces más rápido** (45 vs 190 épocas) y alcanza mayor exactitud gracias a la estimación adaptativa de momentos de primer y segundo orden ($m_t, v_t$). Para SGD con MSE escalada a 10 salidas, tasas pequeñas ($\eta \le 0.01$) resultaron demasiado lentas.
+| Optimizador | Mejor $\eta$ (valores probados) | Val Accuracy | Val Loss (MSE) | Macro F1 | Mejor época | Épocas hasta early stopping |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **SGD Mini-batch (32)** | $0.3$ (8) | 95.65% $\pm$ 0.13% | $0.00738 \pm 0.00044$ | $0.8511 \pm 0.0017$ | $191 \pm 20$ | $211 \pm 20$ |
+| **Momentum ($\alpha = 0.9$)** | $0.1$ (3) | 95.90% $\pm$ 0.18% | $0.00720 \pm 0.00034$ | $0.8534 \pm 0.0044$ | $86 \pm 23$ | $106 \pm 23$ |
+| **RMSProp** | $0.001$ (3) | **96.20% $\pm$ 0.22%** | **$0.00675 \pm 0.00026$** | **$0.8554 \pm 0.0008$** | **$42 \pm 6$** | **$62 \pm 6$** |
+| **Adam** | $0.001$ (8) | 96.08% $\pm$ 0.30% | $0.00690 \pm 0.00021$ | $0.8532 \pm 0.0037$ | $46 \pm 8$ | $66 \pm 8$ |
+| **SGD + $\eta$ adaptativo** | $\eta_0 = 0.1$; $a = 0.05$, $b = 0.5$, $k = 3$, $k' = 2$ (2) | 95.66% $\pm$ 0.04% | $0.00732 \pm 0.00043$ | $0.8515 \pm 0.0018$ | $115 \pm 6$ | $135 \pm 6$ |
+
+Media $\pm$ desvío entre 3 semillas. "Épocas hasta early stopping" es la época en la que cortó el entrenamiento (paciencia 20, máximo 300); "Mejor época" es la de menor pérdida de validación, cuyos pesos se restauran.
+
+Detalle de los mini-barridos (exactitud de validación; épocas hasta el corte):
+
+- **Momentum ($\alpha = 0.9$):** $\eta = 0.01$ → 95.54% $\pm$ 0.18% (300, sin corte); $\eta = 0.03$ → 95.88% $\pm$ 0.09% ($212 \pm 18$); $\eta = 0.1$ → 95.90% $\pm$ 0.18% ($106 \pm 23$).
+- **RMSProp:** $\eta = 0.0001$ → 95.89% $\pm$ 0.21% ($206 \pm 38$); $\eta = 0.0003$ → 96.01% $\pm$ 0.08% ($98 \pm 14$); $\eta = 0.001$ → 96.20% $\pm$ 0.22% ($62 \pm 6$).
+- **SGD + $\eta$ adaptativo ($\eta_0 = 0.1$):** $a = 0.01$, $b = 0.1$, $k = 5$, $k' = 3$ → 95.65% $\pm$ 0.10% ($247 \pm 21$), $\eta$ final entre 0.47 y 0.58; $a = 0.05$, $b = 0.5$, $k = 3$, $k' = 2$ → 95.66% $\pm$ 0.04% ($135 \pm 6$), $\eta$ final entre 1.18 y 1.35. Con el mismo $\eta = 0.1$ fijo, SGD llega a 95.48% $\pm$ 0.10% sin cortar en 300 épocas.
+
+- **Conclusión:** El mecanismo de optimización cambia sobre todo la **velocidad de convergencia** y poco la exactitud final: los cinco quedan en un rango de 0.55 puntos (95.65%–96.20%). Los métodos con tasa adaptativa por parámetro (RMSProp y Adam) cortan en **≈ 3 veces menos épocas** que SGD (62–66 vs 211) y obtienen la mayor exactitud; entre ellos la diferencia (0.12 puntos) es menor que un desvío, así que con 3 semillas no se distinguen. Momentum reduce las épocas de SGD a la mitad (106 vs 211). El $\eta$ adaptativo de la cátedra iguala al mejor $\eta$ fijo de SGD (95.66% vs 95.65%) en un 36% menos de épocas (135 vs 211) sin haber ajustado $\eta$ a mano: partiendo de $\eta_0 = 0.1$ lo sube hasta $\approx 1.25$ en promedio. Para SGD con MSE escalada a 10 salidas, tasas pequeñas ($\eta \le 0.01$) resultaron demasiado lentas.
+- **Limitaciones:** El mejor $\eta$ de SGD, Momentum y RMSProp es el mayor de su grilla (y el $\eta$ adaptativo termina por encima de 0.3), así que su óptimo puede estar más arriba; solo el de Adam es interior. Los tiempos de pared de `ej2_opt` y `ej2_eta_adapt` no son comparables con los de `ej2_lr` (otra máquina, y dentro de `ej2_opt` el s/época varió entre 0.5 y 8.6), por eso se comparan épocas y no segundos.
 
 ### 2. Variación de Arquitectura: Ancho vs Profundidad
 
