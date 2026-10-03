@@ -13,7 +13,7 @@
 ```python
 confusion_matrix(y_true, y_pred, n_classes=None) -> np.ndarray   # filas = real, columnas = predicho
 binary_counts(y_true, y_pred, positive=1) -> dict[str, int]      # TP, FP, TN, FN
-accuracy · precision · recall · f1 · fbeta(beta) · tpr · fpr     # binario, sobre etiquetas enteras
+accuracy · precision · recall · f1 · tpr · fpr                   # binario, sobre etiquetas enteras
 per_class_report(y_true, y_pred, n_classes) -> dict              # precision/recall/f1/support por clase
 macro(report, metric) -> float
 mse · rmse · mae                                                  # regresión / distillation
@@ -28,7 +28,7 @@ to_labels(Y, *, task, threshold=0.5) -> np.ndarray
     # multiclass: argmax por fila (sirve para one-hot 0/1 y ±1)
     # binary: 1 si Y >= threshold (salida sigmoide) — para salida tanh usar threshold=0.0
 get_metric(name, *, task: Literal["binary", "multiclass", "regression"], threshold=0.5) -> Metric
-METRIC_NAMES = ("accuracy", "macro_f1", "precision", "recall", "f1", "f2", "mse", "mae")
+METRIC_NAMES = ("accuracy", "macro_f1", "precision", "recall", "f1", "mse", "mae")
 ```
 Ejemplo: `net.fit(..., metrics={"accuracy": get_metric("accuracy", task="multiclass")})`.
 
@@ -36,12 +36,12 @@ Ejemplo: `net.fit(..., metrics={"accuracy": get_metric("accuracy", task="multicl
 ```python
 threshold_sweep(y_true, y_score, thresholds=np.linspace(0, 1, 101),
                 cost_fn=1.0, cost_fp=1.0) -> pd.DataFrame
-    # columnas: threshold, TP, FP, TN, FN, precision, recall, f1, f2, tpr, fpr, youden, cost
+    # columnas: threshold, TP, FP, TN, FN, precision, recall, f1, tpr, fpr, youden, cost
 roc_curve(y_true, y_score) -> (fpr, tpr, thresholds)      # usa todos los scores únicos
 pr_curve(y_true, y_score) -> (precision, recall, thresholds)
 auc_trapezoid(x, y) -> float
 average_precision(y_true, y_score) -> float
-select_threshold(sweep_df, criterion: Literal["f1", "f2", "youden", "cost", "precision_at_recall"],
+select_threshold(sweep_df, criterion: Literal["f1", "youden", "cost", "precision_at_recall"],
                  min_recall: float | None = None) -> dict   # {threshold, criterion, métricas en ese punto}
 ```
 

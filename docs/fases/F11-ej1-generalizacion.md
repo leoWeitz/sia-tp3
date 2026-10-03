@@ -26,9 +26,9 @@ fraud_dataset.csv
 | Métrica | Rol | Por qué |
 |---|---|---|
 | **Average Precision (área PR)** | Principal, independiente del umbral | Con clases desbalanceadas, PR refleja el desempeño sobre la clase rara (fraude); ROC puede verse optimista |
-| **Recall (TPR)** en el umbral elegido | Principal operativa | Fraude no detectado (FN) suele ser el error más caro |
+| **Recall (TPR)** en el umbral elegido | Principal operativa | Cuántos fraudes se detectan (cada FN es un fraude que se escapa) |
 | **Precision** en el umbral elegido | Principal operativa | Costo de revisar/bloquear transacciones legítimas (FP) |
-| **F1 / F2** | Resumen en un número | F2 pondera más recall |
+| **F1** | Resumen en un número | Media armónica de precision y recall |
 | ROC-AUC, FPR | Secundarias | Comparabilidad con la literatura |
 | Accuracy | Se reporta **con advertencia** | Un modelo que dice "nunca es fraude" tiene accuracy = 1 − tasa de fraude |
 | MSE vs BigModel | Si el target es la probabilidad de BigModel | Mide la calidad de la destilación en sí |
@@ -47,7 +47,7 @@ Si existen etiqueta real **y** probabilidad de BigModel: comparar TinyModel vs B
 
 ## Estudio de umbral (E1-B-c)
 1. `threshold_sweep` sobre las predicciones OOF concatenadas (todas las semillas).
-2. Reportar los umbrales de cada criterio de `04-matematica.md` §7: F1, F2, Youden, costo mínimo, precision@recall ≥ r (r ∈ {0.8, 0.9}).
+2. Reportar los umbrales de cada criterio de `04-matematica.md` §7: F1, Youden, costo mínimo, precision@recall ≥ r (r ∈ {0.8, 0.9}).
 3. Sensibilidad al costo: razón $c_{FN}/c_{FP}$ ∈ {1, 2, 5, 10, 20} → umbral óptimo para cada una.
 4. **Recomendación a CompanyX:** un umbral concreto + el criterio + qué implica en números por cada 1000 transacciones (cuántos fraudes se detectan, cuántas alertas falsas). Presentarlo como decisión de negocio parametrizada por el costo, con nuestra recomendación por defecto.
 5. Variabilidad del umbral entre folds (¿es estable?).
@@ -56,7 +56,7 @@ Si existen etiqueta real **y** probabilidad de BigModel: comparar TinyModel vs B
 1. Tabla de métricas CV (media ± desvío) del modelo elegido **(E1-B-a)**
 2. Boxplot de la métrica principal por estrategia de split; curva métrica vs fracción de entrenamiento; barra "mejor fold vs todo el resto" en el pseudo-test **(E1-B-b)**
 3. Curvas PR y ROC (OOF), con el punto del umbral recomendado
-4. Precision, recall, F1, F2 vs umbral, con los umbrales de cada criterio marcados
+4. Precision, recall, F1 vs umbral, con los umbrales de cada criterio marcados
 5. Umbral óptimo vs razón de costos
 6. Matriz de confusión en TEST al umbral recomendado + tabla de métricas finales **(E1-B-c)**
 7. "Tiny": cantidad de parámetros, tamaño en bytes del `model.npz`, tiempo de inferencia por 10⁵ transacciones

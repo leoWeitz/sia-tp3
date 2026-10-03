@@ -123,7 +123,7 @@ and_dataset() · xor_dataset() · line_samples(f, n, lo, hi, rng)
 ```python
 # core/metrics.py — nivel etiquetas
 confusion_matrix(y_true, y_pred, n_classes=None)   # filas = real, columnas = predicho
-accuracy · precision · recall · f1 · fbeta · tpr · fpr · per_class_report · macro · mse · rmse · mae
+accuracy · precision · recall · f1 · tpr · fpr · per_class_report · macro · mse · rmse · mae
 classification_summary(y_true_labels, y_pred_labels, n_classes) -> dict (JSON)
 # nivel salidas de la red (compatible con Metric de fit: f(y_true, y_pred) con arrays (n, n_out))
 get_metric(name, *, task: "binary" | "multiclass" | "regression", threshold=0.5) -> Metric

@@ -92,7 +92,7 @@ La config de referencia del control está en `experiments/configs/ej1/base.json`
 
 ## Observaciones para modelado
 
-- **Desbalance** de 11.6 % de positivos. Accuracy sola no sirve (el "nunca fraude" da 88.4 %). En F11 conviene usar PR-AUC, F1/F2, recall y precision al umbral.
+- **Desbalance** de 11.6 % de positivos. Accuracy sola no sirve (el "nunca fraude" da 88.4 %). En F11 conviene usar PR-AUC, F1, recall y precision al umbral.
 - **Estratificación.** El runner estratifica un target continuo por deciles de la probabilidad (`data.splits.stratify_labels`). Como la etiqueta es la probabilidad umbralizada en 0.85:
   - los estratos 0–7 tienen 0 % de fraude;
   - el estrato 8 (0.741–0.891) tiene 15.9 %;

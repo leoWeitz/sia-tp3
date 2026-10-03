@@ -128,8 +128,8 @@ Configs en `experiments/configs/ej1/all_features/{cv,split_strategy,best_fold,fi
 | Métrica | Rol | Por qué |
 |---|---|---|
 | **Average Precision** (área PR) | Principal, no depende del umbral | Con 11.6 % de positivos, PR mide el desempeño sobre la clase rara. La ROC-AUC da 0.99 y se ve optimista, porque la dominan los 7.6 negativos por cada positivo |
-| **Recall** y **precision** en el umbral elegido | Principales operativas | Recall = fraudes detectados (el FN es el error caro). Precision = qué fracción de las alertas es fraude de verdad (el costo de revisar) |
-| **F2** | Resumen en un número | Pondera el recall 4 veces más que la precision |
+| **Recall** y **precision** en el umbral elegido | Principales operativas | Recall = fraudes detectados (cada FN es un fraude que se escapa). Precision = qué fracción de las alertas es fraude de verdad (el costo de revisar) |
+| **F1** | Resumen en un número | Media armónica de precision y recall: penaliza tanto los fraudes no detectados como las alertas falsas |
 | **Cuentas por cada 1000 transacciones** | Para CompanyX | Traducen las métricas a detectados, no detectados y alertas falsas |
 | MSE vs BigModel | Calidad de la destilación | Es lo que optimiza el entrenamiento |
 | ROC-AUC, FPR | Secundarias | Comparabilidad |
@@ -168,18 +168,17 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 
 | Criterio | Umbral | Precision | Recall | Detectados / 1000 | No detectados / 1000 | Falsas alarmas / 1000 |
 |---|---|---|---|---|---|---|
-| F1 | 0.89 | 0.89 | 0.86 | 99.7 | 15.8 | 12.0 |
-| **F2 (recomendado)** | **0.81** | **0.76** | **0.95** | **109.5** | **6.0** | **33.7** |
+| **F1 (recomendado)** | **0.89** | **0.89** | **0.86** | **99.7** | **15.8** | **12.0** |
 | Youden | 0.77 | 0.71 | 0.97 | 111.7 | 3.8 | 46.6 |
 | Costo mínimo, c_FN/c_FP = 5 | 0.80 | 0.75 | 0.95 | 110.1 | 5.4 | 36.4 |
 | Precision máxima con recall ≥ 0.8 | 0.92 | 0.92 | 0.81 | 93.9 | 21.6 | 7.9 |
 | Precision máxima con recall ≥ 0.9 | 0.84 | 0.80 | 0.91 | 105.2 | 10.3 | 26.6 |
 
-**Recomendación: umbral 0.81 (criterio F2).**
-1. El error caro es dejar pasar un fraude; una alerta falsa es una revisión. F2 prioriza el recall sin necesidad de conocer los costos exactos.
-2. Coincide con el umbral de costo mínimo para c_FN/c_FP = 5 (0.80). O sea, equivale a suponer que un fraude cuesta unas 5 alertas falsas.
-3. Es estable: elegido en cada uno de los 15 folds da 0.80 ± 0.022 (entre 0.76 y 0.83).
-4. Youden (0.77) se descarta: ignora la prevalencia y suma un 38 % más de alertas falsas para atrapar 2 fraudes más cada 1000.
+**Recomendación: umbral 0.89 (criterio F1).**
+1. El objetivo es imitar a BigModel, cuya decisión es probabilidad > 0.85 (así se define `flagged_fraud`). F1 pesa igual precision y recall y elige un umbral (0.89) pegado a ese corte. Un criterio que priorice el recall lo bajaría y marcaría bastantes más transacciones que BigModel.
+2. Coincide con el umbral de costo mínimo para c_FN/c_FP = 1–2 (0.89). O sea, equivale a suponer que un fraude no detectado cuesta entre 1 y 2 alertas falsas. Si CompanyX considera que un fraude cuesta bastante más, la curva de costos de abajo da el umbral correspondiente.
+3. Es estable: elegido en cada uno de los 15 folds da 0.88 ± 0.026 (entre 0.80 y 0.92).
+4. Youden (0.77) se descarta: ignora la prevalencia y casi cuadruplica las alertas falsas (46.6 contra 12.0 cada 1000) para atrapar 12 fraudes más cada 1000.
 
 **Sensibilidad al costo** (`costos.csv`, figura `E1-B-c_cost_threshold`), con c_FP = 1:
 
@@ -192,23 +191,23 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 
 Si CompanyX conoce su razón de costos, elige el umbral de esa curva. Todo sale de validación, así que moverse sobre ella no toca el TEST.
 
-**Resultado en TEST** (1500 filas, con el umbral 0.81 fijado de antemano, 3 modelos; figura `E1-B-c_test_confusion`, `results/ej1_all_features/ej1_final/final_eval.json`):
+**Resultado en TEST** (1500 filas, con el umbral 0.89 fijado de antemano, 3 modelos; figura `E1-B-c_test_confusion`, `results/ej1_all_features/ej1_final/final_eval.json`):
 
 | Métrica | TinyModel (9 col.) | BigModel (umbral 0.85) |
 |---|---|---|
-| Precision | 0.767 ± 0.004 | 1.000 |
-| Recall | 0.938 ± 0.006 | 1.000 |
-| F2 | 0.898 ± 0.005 | 1.000 |
-| FPR | 0.038 ± 0.001 | 0.000 |
+| Precision | 0.859 ± 0.0005 | 1.000 |
+| Recall | 0.831 ± 0.003 | 1.000 |
+| F1 | 0.845 ± 0.002 | 1.000 |
+| FPR | 0.018 ± 0.000 | 0.000 |
 | AP | 0.943 ± 0.001 | 1.000 |
 | ROC-AUC | 0.991 ± 0.0002 | 1.000 |
 | MSE vs BigModel | 0.01046 ± 3e-5 | — |
 
-- **Matriz de confusión** (media de los 3 modelos): de 176 fraudes, se detectan **165.0** y se escapan **11.0**. De 1324 legítimas, hay **50.0** alertas falsas.
-- **Por cada 1000 transacciones:** 117 fraudes, de los cuales se detectan 110 y se escapan 7, con 33 alertas falsas (143 alertas en total).
-- **El test confirma lo que se estimó en validación.** El recall pasó de 0.948 (OOF) a 0.938 y la precision de 0.765 a 0.767.
+- **Matriz de confusión** (media de los 3 modelos): de 176 fraudes, se detectan **146.3** y se escapan **29.7**. De 1324 legítimas, hay **24.0** alertas falsas.
+- **Por cada 1000 transacciones:** 117 fraudes, de los cuales se detectan 98 y se escapan 20, con 16 alertas falsas (114 alertas en total).
+- **El test confirma lo que se estimó en validación.** El recall pasó de 0.863 (OOF) a 0.831 y la precision de 0.893 a 0.859, dentro de la variación esperable para 176 fraudes.
 
-**¿Alcanza la performance de BigModel?** No. BigModel separa las clases perfecto, porque `flagged_fraud` es exactamente su probabilidad > 0.85. El TinyModel reproduce bien la probabilidad (MSE 0.0105) pero no el corte: con un solo producto escalar no puede imitar las reglas duras de la EDA (cantidad > 9, cuenta < 30 días, ...). Sus errores se concentran cerca del corte: el **90 % ± 0.3 %** de los FN y FP en TEST tienen probabilidad de BigModel entre 0.7 y 0.95, una franja donde cae solo el 14 % de las transacciones (`resumen.json › test.mean.errores_cerca_del_corte`). Esto confirma la hipótesis de F09 sobre la zona del corte, aunque A mostró que el mayor error *cuadrático* está entre los no fraudes.
+**¿Alcanza la performance de BigModel?** No. BigModel separa las clases perfecto, porque `flagged_fraud` es exactamente su probabilidad > 0.85. El TinyModel reproduce bien la probabilidad (MSE 0.0105) pero no el corte: con un solo producto escalar no puede imitar las reglas duras de la EDA (cantidad > 9, cuenta < 30 días, ...). Sus errores se concentran cerca del corte: el **94 % ± 0.06 %** de los FN y FP en TEST tienen probabilidad de BigModel entre 0.7 y 0.95, una franja donde cae solo el 14 % de las transacciones (`resumen.json › test.mean.errores_cerca_del_corte`). Esto confirma la hipótesis de F09 sobre la zona del corte, aunque A mostró que el mayor error *cuadrático* está entre los no fraudes.
 
 **¿Es tiny?** Figura `E1-B-c_tiny`:
 - 10 parámetros.
@@ -217,17 +216,17 @@ Si CompanyX conoce su razón de costos, elige el umbral de esa curva. Todo sale 
 
 #### Modelo recomendado a CompanyX: el de 6 columnas
 
-Se entrega el modelo del control (C.2): logística `[6, 1]`, 7 parámetros, β = 1, η = 3e-3, 26 épocas (`results/ej1_final/final_s{0,1,2}`), con el mismo umbral 0.81.
+Se entrega el modelo del control (C.2): logística `[6, 1]`, 7 parámetros, β = 1, η = 3e-3, 26 épocas (`results/ej1_final/final_s{0,1,2}`), con el mismo umbral 0.89.
 
 **Por qué el de 6 y no el de 9.** La decisión sale de validación y de criterios de diseño, nunca del TEST:
-1. **En validación rinden igual.** Con la misma config y los mismos folds, las 9 columnas bajan el val MSE solo un 0.6 % (C.0). Con el umbral 0.81, el recall OOF es 0.948 contra 0.947 y las alertas falsas son 33.7 cada 1000 en los dos.
+1. **En validación rinden igual.** Con la misma config y los mismos folds, las 9 columnas bajan el val MSE solo un 0.6 % (C.0). Con el umbral 0.89, el recall OOF es 0.863 contra 0.861 y las alertas falsas son 12.0 contra 11.9 cada 1000.
 2. **Las 3 columnas extra no aportan.** El modelo de 9 les da un peso ~0 (C.0), que es lo que anticipaba la EDA de F09.
 3. **Es más chico:** 7 parámetros contra 10.
 4. **No depende del `timestamp`.** Ni el TEST ni los folds miden su riesgo: se arman al azar, así que todas las fechas de validación caen dentro del rango de entrenamiento. En producción, las transacciones nuevas son posteriores y el z-score del `timestamp` crece sin límite.
 
-**El TEST favorece levemente al de 9 columnas, y no se usó para decidir.** Con 9 se escapan 11.0 fraudes de 176, contra 14.3 con 6. Son 3 fraudes, dentro de la variación de un conjunto de 1500 filas, y en validación (6000 filas × 3 semillas) la diferencia no aparece.
+**El TEST favorece levemente al de 9 columnas, y no se usó para decidir.** Con 9 se escapan 29.7 fraudes de 176, contra 32.3 con 6. Son menos de 3 fraudes, dentro de la variación de un conjunto de 1500 filas, y en validación (6000 filas × 3 semillas) la diferencia no aparece.
 
-**Resultado del modelo recomendado en TEST** (C.2): precision 0.772 ± 0.011, recall 0.919 ± 0.012, F2 0.885 ± 0.011 y AP 0.944 ± 0.003. Por cada 1000 transacciones, detecta 108 de 117 fraudes, se le escapan 10 y genera 32 alertas falsas.
+**Resultado del modelo recomendado en TEST** (C.2): precision 0.862 ± 0.002, recall 0.816 ± 0.012, F1 0.838 ± 0.007 y AP 0.944 ± 0.003. Por cada 1000 transacciones, detecta 96 de 117 fraudes, se le escapan 22 y genera 15 alertas falsas.
 
 ## C · Control: las 6 columnas elegidas en F09
 
@@ -265,24 +264,24 @@ En la EDA de F09 se descartaron `timestamp`, `device_screen_resolution` y `time_
 
 - **Hay una mejora consistente, pero de 0.6 %.** Es 8 veces menor que la variación del val MSE entre folds (5.5e-4).
 - **Selección.** Con la misma regla, cada versión elige otra config: η = 1e-3 y β = 2 con 9 columnas, η = 3e-3 y β = 1 con 6. En las dos, las 6 configs del barrido son equivalentes.
-- **Umbral.** F2 da **0.81** en las dos versiones, con el mismo desempeño en OOF: recall 0.948 contra 0.947 y 33.7 alertas falsas cada 1000 en las dos.
+- **Umbral.** F1 da **0.89** en las dos versiones, con el mismo desempeño en OOF: recall 0.863 contra 0.861 y 12.0 contra 11.9 alertas falsas cada 1000.
 - **Partición y "mejor fold".** Las dos llegan a las mismas conclusiones con los mismos números: k-fold con AP ± 0.0007 contra ± 0.0005, y un mejor fold que es ~10 % optimista.
 
-**TEST** (umbral 0.81, 3 modelos por versión)
+**TEST** (umbral 0.89, 3 modelos por versión)
 
 | Métrica | 9 col. (B) | 6 col. (C.2) |
 |---|---|---|
 | MSE vs BigModel | 0.01046 | 0.01055 |
-| Precision | 0.767 ± 0.004 | 0.772 ± 0.011 |
-| Recall | 0.938 ± 0.006 | 0.919 ± 0.012 |
-| F2 | 0.898 ± 0.005 | 0.885 ± 0.011 |
+| Precision | 0.859 ± 0.0005 | 0.862 ± 0.002 |
+| Recall | 0.831 ± 0.003 | 0.816 ± 0.012 |
+| F1 | 0.845 ± 0.002 | 0.838 ± 0.007 |
 | AP | 0.943 ± 0.001 | 0.944 ± 0.003 |
-| Fraudes no detectados (de 176) | 11.0 | 14.3 |
-| Alertas falsas (de 1324) | 50.0 | 47.7 |
-| Errores cerca del corte (0.7–0.95) | 90 % | 91 % |
+| Fraudes no detectados (de 176) | 29.7 | 32.3 |
+| Alertas falsas (de 1324) | 24.0 | 23.0 |
+| Errores cerca del corte (0.7–0.95) | 94 % | 96 % |
 | Parámetros | 10 | 7 |
 
-- La diferencia en recall son **3 fraudes de 176**.
+- La diferencia en recall son **menos de 3 fraudes de 176**.
 - En validación, con el mismo umbral, el recall es idéntico. La diferencia del TEST es la variación de un conjunto de 1500 filas, no una mejora del modelo.
 - El AP, que no depende del umbral, es el mismo.
 - No se usó para ninguna decisión (ver B-c).
@@ -428,8 +427,8 @@ Configs en `experiments/configs/ej1/{cv,split_strategy,best_fold,final}.json`; e
 | Métrica | Rol | Por qué |
 |---|---|---|
 | **Average Precision** (área PR) | Principal, no depende del umbral | Con 11.6 % de positivos, PR mide el desempeño sobre la clase rara. La ROC-AUC da 0.99 y se ve optimista, porque la dominan los 7.6 negativos por cada positivo |
-| **Recall** y **precision** en el umbral elegido | Principales operativas | Recall = fraudes detectados (el FN es el error caro). Precision = qué fracción de las alertas es fraude de verdad (el costo de revisar) |
-| **F2** | Resumen en un número | Pondera el recall 4 veces más que la precision |
+| **Recall** y **precision** en el umbral elegido | Principales operativas | Recall = fraudes detectados (cada FN es un fraude que se escapa). Precision = qué fracción de las alertas es fraude de verdad (el costo de revisar) |
+| **F1** | Resumen en un número | Media armónica de precision y recall: penaliza tanto los fraudes no detectados como las alertas falsas |
 | **Cuentas por cada 1000 transacciones** | Para CompanyX | Traducen las métricas a detectados, no detectados y alertas falsas |
 | MSE vs BigModel | Calidad de la destilación | Es lo que optimiza el entrenamiento |
 | ROC-AUC, FPR | Secundarias | Comparabilidad |
@@ -468,18 +467,17 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 
 | Criterio | Umbral | Precision | Recall | Detectados / 1000 | No detectados / 1000 | Falsas alarmas / 1000 |
 |---|---|---|---|---|---|---|
-| F1 | 0.89 | 0.89 | 0.86 | 99.5 | 16.0 | 11.9 |
-| **F2 (recomendado)** | **0.81** | **0.76** | **0.95** | **109.4** | **6.1** | **33.7** |
+| **F1 (recomendado)** | **0.89** | **0.89** | **0.86** | **99.5** | **16.0** | **11.9** |
 | Youden | 0.73 | 0.65 | 0.98 | 113.7 | 1.8 | 62.4 |
 | Costo mínimo, c_FN/c_FP = 5 | 0.80 | 0.75 | 0.95 | 109.9 | 5.6 | 36.1 |
 | Precision máxima con recall ≥ 0.8 | 0.92 | 0.92 | 0.81 | 93.4 | 22.1 | 8.2 |
 | Precision máxima con recall ≥ 0.9 | 0.84 | 0.80 | 0.91 | 105.3 | 10.2 | 26.9 |
 
-**Recomendación: umbral 0.81 (criterio F2).**
-1. El error caro es dejar pasar un fraude; una alerta falsa es una revisión. F2 prioriza el recall sin necesidad de conocer los costos exactos.
-2. Coincide con el umbral de costo mínimo para c_FN/c_FP = 5 (0.80). O sea, equivale a suponer que un fraude cuesta unas 5 alertas falsas.
-3. Es estable: elegido en cada uno de los 15 folds da 0.80 ± 0.025 (entre 0.74 y 0.83).
-4. Youden (0.73) se descarta: ignora la prevalencia y casi duplica las alertas falsas.
+**Recomendación: umbral 0.89 (criterio F1).**
+1. El objetivo es imitar a BigModel, cuya decisión es probabilidad > 0.85 (así se define `flagged_fraud`). F1 pesa igual precision y recall y elige un umbral (0.89) pegado a ese corte. Un criterio que priorice el recall lo bajaría y marcaría bastantes más transacciones que BigModel.
+2. Coincide con el umbral de costo mínimo para c_FN/c_FP = 1–2 (0.89). O sea, equivale a suponer que un fraude no detectado cuesta entre 1 y 2 alertas falsas. Si CompanyX considera que un fraude cuesta bastante más, la curva de costos de abajo da el umbral correspondiente.
+3. Es estable: elegido en cada uno de los 15 folds da 0.88 ± 0.024 (entre 0.80 y 0.90).
+4. Youden (0.73) se descarta: ignora la prevalencia y multiplica por 5 las alertas falsas (62.4 contra 11.9 cada 1000).
 
 **Sensibilidad al costo** (`costos.csv`, figura `E1-B-c_cost_threshold`), con c_FP = 1:
 
@@ -491,23 +489,23 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 
 Si CompanyX conoce su razón de costos, elige el umbral de esa curva. Todo sale de validación, así que moverse sobre ella no toca el TEST.
 
-**Resultado en TEST** (1500 filas, con el umbral 0.81 fijado de antemano, 3 modelos; figura `E1-B-c_test_confusion`, `results/ej1_final/final_eval.json`):
+**Resultado en TEST** (1500 filas, con el umbral 0.89 fijado de antemano, 3 modelos; figura `E1-B-c_test_confusion`, `results/ej1_final/final_eval.json`):
 
 | Métrica | TinyModel | BigModel (umbral 0.85) |
 |---|---|---|
-| Precision | 0.772 ± 0.011 | 1.000 |
-| Recall | 0.919 ± 0.012 | 1.000 |
-| F2 | 0.885 ± 0.011 | 1.000 |
-| FPR | 0.036 ± 0.002 | 0.000 |
+| Precision | 0.862 ± 0.002 | 1.000 |
+| Recall | 0.816 ± 0.012 | 1.000 |
+| F1 | 0.838 ± 0.007 | 1.000 |
+| FPR | 0.017 ± 0.000 | 0.000 |
 | AP | 0.944 ± 0.003 | 1.000 |
 | ROC-AUC | 0.991 ± 0.0005 | 1.000 |
 | MSE vs BigModel | 0.01055 ± 3e-5 | — |
 
-- **Matriz de confusión** (media de los 3 modelos): de 176 fraudes, se detectan **161.7** y se escapan **14.3**. De 1324 legítimas, hay **47.7** alertas falsas.
-- **Por cada 1000 transacciones:** 117 fraudes, de los cuales se detectan 108 y se escapan 10, con 32 alertas falsas (140 alertas en total).
-- **El test confirma lo que se estimó en validación.** El recall bajó de 0.947 (OOF) a 0.919: equivale a ~5 de los 176 fraudes del test, dentro de lo esperable para un conjunto de ese tamaño. La precision se mantuvo (0.765 → 0.772).
+- **Matriz de confusión** (media de los 3 modelos): de 176 fraudes, se detectan **143.7** y se escapan **32.3**. De 1324 legítimas, hay **23.0** alertas falsas.
+- **Por cada 1000 transacciones:** 117 fraudes, de los cuales se detectan 96 y se escapan 22, con 15 alertas falsas (111 alertas en total).
+- **El test confirma lo que se estimó en validación.** El recall bajó de 0.861 (OOF) a 0.816: equivale a ~8 de los 176 fraudes del test, dentro de lo esperable para un conjunto de ese tamaño. La precision bajó poco (0.893 → 0.862).
 
-**¿Alcanza la performance de BigModel?** No. BigModel separa las clases perfecto, porque `flagged_fraud` es exactamente su probabilidad > 0.85. El TinyModel reproduce bien la probabilidad (MSE 0.0106) pero no el corte: con un solo producto escalar no puede imitar las reglas duras de la EDA (cantidad > 9, cuenta < 30 días, ...). Sus errores se concentran cerca del corte: el **91 % ± 0.3 %** de los FN y FP en TEST tienen probabilidad de BigModel entre 0.7 y 0.95, una franja donde cae solo el 14 % de las transacciones (`resumen.json › test.mean.errores_cerca_del_corte`). Esto confirma la hipótesis de F09 sobre la zona del corte, aunque F10 mostró que el mayor error *cuadrático* está entre los no fraudes.
+**¿Alcanza la performance de BigModel?** No. BigModel separa las clases perfecto, porque `flagged_fraud` es exactamente su probabilidad > 0.85. El TinyModel reproduce bien la probabilidad (MSE 0.0106) pero no el corte: con un solo producto escalar no puede imitar las reglas duras de la EDA (cantidad > 9, cuenta < 30 días, ...). Sus errores se concentran cerca del corte: el **96 % ± 0.1 %** de los FN y FP en TEST tienen probabilidad de BigModel entre 0.7 y 0.95, una franja donde cae solo el 14 % de las transacciones (`resumen.json › test.mean.errores_cerca_del_corte`). Esto confirma la hipótesis de F09 sobre la zona del corte, aunque F10 mostró que el mayor error *cuadrático* está entre los no fraudes.
 
 **¿Es tiny?** Figura `E1-B-c_tiny`:
 - 7 parámetros.

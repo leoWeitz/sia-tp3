@@ -133,7 +133,6 @@ Matriz de confusión: **filas = clase real, columnas = clase predicha** (convenc
 | **Real negativo** | FP | TN |
 
 - Accuracy $= \frac{TP+TN}{TP+TN+FP+FN}$ · Precision $= \frac{TP}{TP+FP}$ · Recall = TPR $= \frac{TP}{TP+FN}$ · F1 $= \frac{2PR}{P+R}$ · FPR $= \frac{FP}{FP+TN}$
-- $F_\beta = \frac{(1+\beta^2)PR}{\beta^2P + R}$ (β > 1 prioriza recall).
 - Multiclase: métricas por clase (uno contra todos) + **macro** (promedio simple entre clases). Accuracy multiclase = traza / total.
 - División por cero → 0.0 y se marca en el resultado (`"undefined": true`).
 - Regresión (distillation sobre probabilidades): MSE, RMSE, MAE.
@@ -151,11 +150,11 @@ Matriz de confusión: **filas = clase real, columnas = clase predicha** (convenc
 ## §7 Umbral de decisión (Ej1)
 
 Dado un score $s\in[0,1]$ y umbral $t$: predicción positiva si $s \ge t$.
-- Barrido $t \in \{0.00, 0.01, \dots, 1.00\}$ → TPR, FPR, precision, recall, F1, $F_2$, costo.
+- Barrido $t \in \{0.00, 0.01, \dots, 1.00\}$ → TPR, FPR, precision, recall, F1, costo.
 - **ROC**: TPR vs FPR; **AUC** por trapecios ordenando por FPR.
 - **PR**: precision vs recall; **AP** $= \sum_k (R_k - R_{k-1})P_k$.
 - Criterios de selección (se reportan todos, se recomienda uno y se justifica):
-  1. $\arg\max_t F_1$ · 2. $\arg\max_t F_2$ · 3. Youden $J = TPR - FPR$ · 4. Costo esperado mínimo $C(t) = c_{FN}\,FN(t) + c_{FP}\,FP(t)$ con costos parametrizables · 5. Máxima precision sujeta a recall ≥ $r_{min}$.
+  1. $\arg\max_t F_1$ · 2. Youden $J = TPR - FPR$ · 3. Costo esperado mínimo $C(t) = c_{FN}\,FN(t) + c_{FP}\,FP(t)$ con costos parametrizables · 4. Máxima precision sujeta a recall ≥ $r_{min}$.
 - El umbral se elige en **validación** (idealmente promediando folds) y se reporta **una vez** en test.
 
 ---
