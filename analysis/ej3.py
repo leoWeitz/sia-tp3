@@ -2,10 +2,13 @@
 
 Genera las figuras y tablas para docs/resultados/ej3.md:
 - E3-01_accuracy_progression: Progresión de exactitud con cota 98%.
-- E3-02_ablation_ranking: Tabla/gráfico de ablación de técnicas.
+- E3-02_ablation_ranking: Grilla de ablación en validación (red × RandomShift).
 - E3-03_per_class_recall_comparison: Recall por dígito (impacto en 8 y 5).
 - E3-04_test_confusion_matrix: Matriz de confusión oficial en test.
 - E3-05_hard_examples: Muestras difíciles del test set mal clasificadas.
+
+Además imprime la descomposición por dígito de la mejora en test de Ej2 a Ej3
+(decompose_test_gain).
 
 Uso:
     python -m analysis.ej3 [--results-dir results] [--out-dir figures/ej3]
@@ -22,6 +25,15 @@ import pandas as pd
 
 from analysis.common import PALETTE, apply_style, save_figure
 from data.loaders import load_digits_csv
+
+# Grilla de ablación de E3-02 sobre ej3_search, en el orden fijo de la figura:
+# filas (etiqueta, activación oculta, capas) y columnas (etiqueta, max_px del RandomShift).
+ABLATION_NETWORKS = (
+    ("tanh [128]", "tanh", [784, 128, 10]),
+    ("ReLU [128]", "relu", [784, 128, 10]),
+    ("ReLU [256, 128]", "relu", [784, 256, 128, 10]),
+)
+ABLATION_SHIFTS = (("Sin shift", None), ("Shift ±1 px", 1.0), ("Shift ±2 px", 2.0))
 
 
 def plot_accuracy_progression(results_dir: Path, out_dir: Path) -> Path:
@@ -43,28 +55,29 @@ def plot_accuracy_progression(results_dir: Path, out_dir: Path) -> Path:
         df_search.loc[df_search["val.accuracy_mean"].idxmax(), "val.accuracy_std"] * 100.0
     )
 
+    # Cada etiqueta dice sobre qué conjunto se midió la barra: validación y test no se comparan.
     milestones = [
         (
-            "Ej2 Final\n(Test sin 8s)",
+            "Ej2 Final\nTEST\n(entrenado sin 8s)",
             ej2_final["mean"]["accuracy"] * 100.0,
             ej2_final["std"]["accuracy"] * 100.0,
             PALETTE[7],
         ),
         (
-            "Ej3 Base\n(Dato unión)",
+            "Ej3 Base\nVALIDACIÓN\n(dato unión)",
             df_base["val.accuracy_mean"].values[0] * 100.0,
             df_base["val.accuracy_std"].values[0] * 100.0,
             PALETTE[3],
         ),
-        ("Ej3 Búsqueda\n(ReLU+Shift)", best_search_acc, best_search_std, PALETTE[0]),
+        ("Ej3 Búsqueda\nVALIDACIÓN\n(ReLU + shift)", best_search_acc, best_search_std, PALETTE[0]),
         (
-            "Ej3 Best\n(Val 5 seeds)",
+            "Ej3 Best\nVALIDACIÓN\n(5 semillas)",
             df_best["val.accuracy_mean"].values[0] * 100.0,
             df_best["val.accuracy_std"].values[0] * 100.0,
             PALETTE[2],
         ),
         (
-            "Ej3 Final\n(Test Sagrado)",
+            "Ej3 Final\nTEST\n(sagrado)",
             ej3_final["mean"]["accuracy"] * 100.0,
             ej3_final["std"]["accuracy"] * 100.0,
             PALETTE[5],
@@ -108,54 +121,134 @@ def plot_accuracy_progression(results_dir: Path, out_dir: Path) -> Path:
     return save_figure(fig, out_dir / "E3-01_accuracy_progression")
 
 
-def plot_ablation_ranking(results_dir: Path, out_dir: Path) -> Path:
-    """Ablación de factores en Ej3 (ordenados por aporte sobre la línea base)."""
-    apply_style()
-    base_val = 96.92  # ej3_baseline
+def ablation_grid(results_dir: Path) -> pd.DataFrame:
+    """Accuracy de validación de ej3_search para ABLATION_NETWORKS × ABLATION_SHIFTS.
 
-    # Factores aislados
-    items = [
-        ("Base (Tanh 128, sin aug)", base_val, 0.44),
-        ("+ ReLU (en lugar de Tanh)", 97.19, 0.57),
-        ("+ Capacidad (ReLU [256, 128])", 97.65, 0.52),
-        ("+ RandomShift ±1 px (Tanh 128)", 98.11, 0.43),
-        ("+ ReLU 128 + RandomShift ±1 px", 98.30, 0.36),
-        ("+ Combinación Óptima (ReLU [256, 128] + Shift ±1)", 98.48, 0.24),
-    ]
-
-    labels = [it[0] for it in items]
-    vals = [it[1] for it in items]
-    errs = [it[2] for it in items]
-    diffs = [v - base_val for v in vals]
-
-    y = np.arange(len(labels))
-
-    fig, ax = plt.subplots(figsize=(9, 4.5))
-    bars = ax.barh(
-        y, diffs, xerr=errs, capsize=3, color=PALETTE[0], height=0.55, edgecolor="#0b0b0b", lw=0.8
-    )
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(labels, fontsize=8.5)
-    ax.set_xlabel("Ganancia de Exactitud respecto a la Base de Ej3 (+ puntos %)")
-    ax.set_title("Estudio de Ablación: Contribución de Cada Técnica")
-    ax.grid(True, linestyle="--", alpha=0.5, axis="x")
-
-    for i, bar in enumerate(bars):
-        w = bar.get_width()
-        text = f"+{w:.2f}% ({vals[i]:.2f}%)" if w > 0 else f"{vals[i]:.2f}%"
-        ax.text(
-            w + 0.08,
-            bar.get_y() + bar.get_height() / 2.0,
-            text,
-            va="center",
-            fontsize=8,
-            weight="bold",
+    Una fila por celda, redes por filas y shift por columnas: network, shift,
+    hash, n (semillas), accuracy_mean y accuracy_std (ddof = 1), tal como
+    están en results/ej3_search/summary.csv. Una celda que no aparezca
+    exactamente una vez en el barrido es un ValueError.
+    """
+    df = pd.read_csv(results_dir / "ej3_search" / "summary.csv")
+    layers = df["model.layers"].map(json.loads)
+    rows = []
+    for network, activation, sizes in ABLATION_NETWORKS:
+        is_network = (df["model.hidden_activation"] == activation) & layers.map(
+            lambda v, sizes=sizes: v == sizes
         )
+        for shift, max_px in ABLATION_SHIFTS:
+            if max_px is None:
+                is_shift = df["training.augmentation.kind"].isna()
+            else:
+                is_shift = (df["training.augmentation.kind"] == "random_shift") & (
+                    df["training.augmentation.max_px"] == max_px
+                )
+            cell = df[is_network & is_shift]
+            if len(cell) != 1:
+                raise ValueError(
+                    f"ej3_search: {len(cell)} configuraciones para {network!r} con {shift!r}, "
+                    "se esperaba 1"
+                )
+            row = cell.iloc[0]
+            rows.append(
+                {
+                    "network": network,
+                    "shift": shift,
+                    "hash": row["hash"],
+                    "n": int(row["n"]),
+                    "accuracy_mean": row["val.accuracy_mean"],
+                    "accuracy_std": row["val.accuracy_std"],
+                }
+            )
+    return pd.DataFrame(rows)
 
-    ax.set_xlim(-0.2, 2.2)
-    fig.tight_layout()
+
+def plot_ablation_ranking(results_dir: Path, out_dir: Path) -> Path:
+    """Grilla de ablación de Ej3: accuracy de validación (media ± desvío) por red y RandomShift."""
+    apply_style()
+    grid = ablation_grid(results_dir)
+    networks = [name for name, *_ in ABLATION_NETWORKS]
+    shifts = [name for name, _ in ABLATION_SHIFTS]
+    shape = (len(networks), len(shifts))
+    mean = grid["accuracy_mean"].to_numpy().reshape(shape) * 100.0
+    std = grid["accuracy_std"].to_numpy().reshape(shape) * 100.0
+
+    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    im = ax.imshow(mean, cmap="Blues", aspect="auto")
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Exactitud de validación (%)")
+
+    ax.set_xticks(np.arange(len(shifts)))
+    ax.set_xticklabels(shifts)
+    ax.set_yticks(np.arange(len(networks)))
+    ax.set_yticklabels(networks)
+    ax.set_xlabel("Data augmentation (RandomShift)")
+    ax.set_ylabel("Red (capas ocultas)")
+    ax.set_title("Ablación en Validación: Red × RandomShift")
+    ax.grid(False)
+
+    thresh = (mean.max() + mean.min()) / 2.0
+    best = np.unravel_index(np.argmax(mean), shape)
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            ax.text(
+                j,
+                i,
+                f"{mean[i, j]:.2f}\n± {std[i, j]:.2f}",
+                ha="center",
+                va="center",
+                color="white" if mean[i, j] > thresh else "#0b0b0b",
+                fontsize=13,
+                weight="bold" if (i, j) == best else "normal",
+            )
+
+    fig.text(
+        0.5,
+        0.005,
+        f"Unión deduplicada · sigmoide + MSE · Adam η = 0.001 · lote 32 · "
+        f"media ± desvío entre {grid['n'].min()} semillas · en negrita, la mejor",
+        ha="center",
+        fontsize=10,
+        style="italic",
+        color="#52514e",
+    )
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     return save_figure(fig, out_dir / "E3-02_ablation_ranking")
+
+
+def decompose_test_gain(results_dir: Path) -> pd.DataFrame:
+    """Aporte de cada dígito a la mejora de accuracy en test de Ej2 Final a Ej3 Final.
+
+    accuracy = Σ_c (n_c / N) · recall_c, así que
+    Δacc = Σ_c (n_c / N) · (recall_ej3_c − recall_ej2_c) es exacta. Una fila
+    por dígito: digit, n (muestras de test), recall_ej2 y recall_ej3 (media
+    entre los modelos de cada final_eval.json) y contribution (su término de
+    la suma, en puntos porcentuales). Solo lee results/ej2_final y
+    results/ej3_final; si no evaluaron el mismo test es un ValueError.
+    """
+    recalls, supports = {}, {}
+    for name in ("ej2_final", "ej3_final"):
+        with open(results_dir / name / "final_eval.json") as f:
+            models = json.load(f)["models"]
+        per_class = [m["test"]["per_class"] for m in models]
+        if any(p["support"] != per_class[0]["support"] for p in per_class):
+            raise ValueError(f"{name}: los modelos no evaluaron el mismo test")
+        supports[name] = np.array(per_class[0]["support"])
+        recalls[name] = np.mean([p["recall"] for p in per_class], axis=0)
+    if not np.array_equal(supports["ej2_final"], supports["ej3_final"]):
+        raise ValueError("ej2_final y ej3_final no evaluaron el mismo test")
+
+    n = supports["ej3_final"]
+    delta = recalls["ej3_final"] - recalls["ej2_final"]
+    return pd.DataFrame(
+        {
+            "digit": np.arange(len(n)),
+            "n": n,
+            "recall_ej2": recalls["ej2_final"],
+            "recall_ej3": recalls["ej3_final"],
+            "contribution": n / n.sum() * delta * 100.0,
+        }
+    )
 
 
 def plot_per_class_recall_comparison(results_dir: Path, out_dir: Path) -> Path:
@@ -328,6 +421,14 @@ def main() -> int:
 
     plot_hard_examples(args.results_dir, args.test_path, args.out_dir)
     print("✓ E3-05_hard_examples")
+
+    gain = decompose_test_gain(args.results_dir)
+    eight = gain.loc[gain["digit"] == 8, "contribution"].sum()
+    total = gain["contribution"].sum()
+    print(
+        f"Mejora en test de Ej2 a Ej3: {total:+.2f} puntos = {eight:+.2f} del dígito 8 "
+        f"{total - eight:+.2f} del resto"
+    )
 
     print("Todas las figuras de Ej3 generadas exitosamente.")
     return 0

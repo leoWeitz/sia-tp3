@@ -200,13 +200,13 @@ Cada corrida escribe `results/<run_name>/<hash8>_s<seed>[_f<fold>]/` (`hash8` = 
 | --- | --- | --- |
 | F00–F03 | Andamiaje, activaciones/pérdidas/inicializadores, perceptrón simple, MLP + backprop + gradient check | ✅ (Etapas 0–4 de `docs/PLAN_MOTOR.md`) |
 | F08 | Validación: AND, y=x, y=tanh(x), XOR, verificación manual | ✅ en tests · falta rehacer la verificación en papel |
-| F04 | Optimizadores (Momentum, RMSProp, Adam), η adaptativo, L2, augmentation, extensiones de `fit` | ⏳ |
+| F04 | Optimizadores (Momentum, RMSProp, Adam), η adaptativo, L2, augmentation, extensiones de `fit` | ✅ |
 | F05 | Datos: loaders, normalización, splits | ✅ |
 | F06 | Métricas y umbrales | ✅ |
 | F07 | Runner, configs, save/load/resume, agregación | ✅ |
-| F09–F11 | Ej. 1: EDA, aprendizaje, generalización y umbral | ⏳ |
-| F12–F13 | Ej. 2 y Ej. 3 | ⏳ |
-| F14–F15 | Análisis final y presentación | ⏳ |
+| F09–F11 | Ej. 1: EDA, aprendizaje, generalización y umbral | ✅ · falta revisión del equipo de la decisión de features (F09) |
+| F12–F13 | Ej. 2 y Ej. 3 | ✅ |
+| F14–F15 | Análisis final y presentación | ⏳ En curso |
 | F16 | Opcionales, **solo** con los tres ejercicios cerrados | ⏳ |
 
 ---

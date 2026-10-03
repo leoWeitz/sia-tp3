@@ -4,7 +4,7 @@
 
 ### 1. Cumplimiento de la Meta
 
-**Sí, se superó holgadamente el objetivo de exactitud $\ge 98.0\%$ en el conjunto de test sagrado.**
+**Sí, se superó el objetivo de exactitud $\ge 98.0\%$ en el conjunto de test sagrado.**
 
 La evaluación final oficial (`--final-eval` sobre `digits_test.csv`, 2 497 muestras, evaluada una sola vez con 5 semillas independientes) arrojó:
 
@@ -36,7 +36,7 @@ El modelo se mantiene **100% fiel al marco canónico de la cátedra** (sin Softm
 - **Épocas de Reentrenamiento:** 45 épocas (mediana de parada temprana de validación).
 - **Dataset de Entrenamiento:** Unión deduplicada `digits_union.csv` (24 501 muestras).
 
-Modelo persistido en: [`models/ej3_best/`](file:///home/cele/Rejunte/git/facu/sia-tp3/models/ej3_best/) (`model.npz` + `config.json`).
+Modelo persistido en: `models/ej3_best/` (`model.npz` + `config.json`).
 
 ### 3. Desempeño por Clase en Test
 
@@ -47,13 +47,13 @@ Promedio sobre las 5 semillas en `digits_test.csv`:
 | **0** | 245 | **99.51%** | 97.95% | 0.9871 |
 | **1** | 283 | **99.93%** | 99.30% | 0.9961 |
 | **2** | 258 | **98.22%** | 98.75% | 0.9848 |
-| **3** | 254 | **99.37%** | 96.54% | 0.9793 |
-| **4** | 257 | **98.61%** | 99.02% | 0.9881 |
+| **3** | 252 | **99.37%** | 96.54% | 0.9793 |
+| **4** | 245 | **98.61%** | 99.02% | 0.9881 |
 | **5** | 223 | **96.50%** | 98.02% | 0.9724 |
 | **6** | 239 | **98.66%** | 98.17% | 0.9841 |
 | **7** | 257 | **97.98%** | 96.70% | 0.9733 |
 | **8** | 243 | **94.07%** | **99.56%** | **0.9674** |
-| **9** | 247 | **97.62%** | 97.08% | 0.9735 |
+| **9** | 252 | **97.62%** | 97.08% | 0.9735 |
 
 Todas las clases superan el 94% de sensibilidad, y el dígito 8 pasó de 0.00% en Ej2 a **94.07% de recall con 99.56% de precisión**.
 
@@ -63,22 +63,34 @@ Figuras de referencia: `figures/ej3/E3-01_accuracy_progression.png` y `figures/e
 
 ## (b) Estudio de Ablación: Contribución de Cada Técnica
 
-Partiendo de la línea base en el nuevo dataset, se descompuso el aporte individual de cada factor (Figura `figures/ej3/E3-02_ablation_ranking.png`):
+Sobre la unión deduplicada se barrió red $\times$ data augmentation (`results/ej3_search/summary.csv`). Exactitud de **validación**, media $\pm$ desvío entre 3 semillas (Figura `figures/ej3/E3-02_ablation_ranking.png`):
 
-| Técnica / Configuración | Val Accuracy (media $\pm$ std) | Ganancia vs Base | Val Loss (MSE) |
+| Red (capas ocultas, inicialización) | Sin shift | RandomShift $\pm 1$ px | RandomShift $\pm 2$ px |
 | :--- | :---: | :---: | :---: |
-| **1. Base Unión (Tanh [128], sin aug)** | 96.92% $\pm$ 0.44% | — | 0.00541 |
-| **2. + ReLU en capas ocultas (He init)** | 97.19% $\pm$ 0.57% | **+0.27%** | 0.00524 |
-| **3. + Capacidad (ReLU [256, 128])** | 97.65% $\pm$ 0.52% | **+0.73%** | 0.00430 |
-| **4. + Data Augmentation (RandomShift $\pm 1$ px)** | 98.11% $\pm$ 0.43% | **+1.19%** | 0.00363 |
-| **5. + ReLU 128 + RandomShift $\pm 1$ px** | 98.30% $\pm$ 0.36% | **+1.38%** | 0.00347 |
-| **6. Combinación Final (ReLU [256, 128] + Shift $\pm 1$)** | **98.48% $\pm$ 0.24%** | **+1.56%** | **0.00268** |
+| **tanh `[128]`** (Xavier) | 96.92% $\pm$ 0.44% | 98.11% $\pm$ 0.43% | 97.95% $\pm$ 0.31% |
+| **ReLU `[128]`** (He) | 97.19% $\pm$ 0.57% | 98.30% $\pm$ 0.36% | 98.01% $\pm$ 0.47% |
+| **ReLU `[256, 128]`** (He) | 97.65% $\pm$ 0.52% | **98.48% $\pm$ 0.24%** | 98.41% $\pm$ 0.19% |
 
-### Jerarquía de Aportes
+La celda de arriba a la izquierda es la línea base (`results/ej3_baseline`); la resaltada es la configuración elegida, que se volvió a correr con 5 semillas (`results/ej3_best`: 98.53% $\pm$ 0.22%). El barrido incluye una cuarta red, ReLU `[128, 64, 32]`, que no entra en la grilla porque fue inestable entre semillas (89.99% $\pm$ 6.48% sin shift, 94.29% $\pm$ 6.26% con $\pm 2$ px).
 
-1. **Data Augmentation (`RandomShift`): $+1.19\%$ individual.** Fue la técnica de mayor impacto. Al trasladar $\pm 1$ px las imágenes en cada época, el modelo aprendió invariancia espacial y dejó de sobreajustar a los trazos centrados.
-2. **Mayor Capacidad (`[784, 256, 128, 10]`): $+0.46\%$ adicional.** Con 24 501 datos disponibles, una arquitectura más profunda y ancha pudo capturar variaciones complejas de caligrafía sin subajustar.
-3. **Activación ReLU en capas ocultas: $+0.27\%$ individual.** Evitó el desvanecimiento del gradiente en capas intermedias frente a $\tanh$, manteniendo activaciones dispersas y estables.
+### Camino de la Línea Base a la Configuración Elegida
+
+Un cambio por vez; las ganancias están en puntos porcentuales de exactitud de validación:
+
+| Paso | Val Accuracy | Ganancia del paso | Acumulado |
+| :--- | :---: | :---: | :---: |
+| **Base:** tanh `[128]`, sin shift | 96.92% | — | — |
+| **1.** tanh $\rightarrow$ ReLU (con He) | 97.19% | +0.27 | +0.27 |
+| **2.** `[128]` $\rightarrow$ `[256, 128]` | 97.65% | +0.46 | +0.73 |
+| **3.** + RandomShift $\pm 1$ px | **98.48%** | +0.83 | **+1.56** |
+
+### Lectura de la Grilla
+
+1. **RandomShift $\pm 1$ px es el factor de mayor efecto en las tres redes:** +1.19 (tanh `[128]`), +1.11 (ReLU `[128]`) y +0.83 puntos (ReLU `[256, 128]`). Es el único cuyo efecto supera con claridad el desvío entre semillas (0.2 a 0.6 puntos). Pasar a $\pm 2$ px no mejora en ninguna red ($-0.16$, $-0.29$ y $-0.07$).
+2. **Mayor capacidad (`[128]` $\rightarrow$ `[256, 128]`, con ReLU):** +0.46 sin shift y +0.18 con $\pm 1$ px.
+3. **ReLU en lugar de $\tanh$ (en `[128]`):** +0.27 sin shift y +0.19 con $\pm 1$ px. Cambia junto con la inicialización (Xavier $\rightarrow$ He), así que el efecto es del par.
+4. **Los aportes no son aditivos.** Sumar los efectos individuales medidos sobre la base ($1.19 + 0.46 + 0.27 = 1.92$) sobreestima la mejora real (+1.56): el shift aporta menos cuanto mejor es la red.
+5. **Con 3 semillas, las diferencias entre redes (0.2 a 0.5 puntos) son del orden de un desvío:** alcanzan para elegir una configuración, no para ordenar las arquitecturas con certeza.
 
 ---
 
@@ -98,15 +110,33 @@ Partiendo de la línea base en el nuevo dataset, se descompuso el aporte individ
 
 ### 2. Cuánto de la Mejora es "Dato" vs "Técnica"
 
-| Paso Evolutivo | Exactitud en Test | Ganancia Absoluta | Factor Explicativo |
-| :--- | :---: | :---: | :--- |
-| **Ej2 Final** (Mejor técnica sobre `digits.csv`) | 88.31% | — | Cota fija por ausencia de ochos en train (techo 90.27%) |
-| **Ej3 Baseline** (Mismo modelo sobre la unión) | ~96.50% | **+8.19%** | **Factor DATO:** La aparición de 585 ochos rescata la clase faltante |
-| **Ej3 Best** (ReLU + Pirámide 256-128 + RandomShift) | **98.09%** | **+1.59%** | **Factor TÉCNICA:** Regularización e invariancia espacial |
+En `digits_test.csv` la exactitud pasó de **88.31%** (Ej2 Final, entrenado con `digits.csv`) a **98.09%** (Ej3 Final, entrenado con la unión): **+9.79 puntos**. Como la exactitud es el promedio de los recalls por clase ponderado por la cantidad de muestras, esa diferencia se descompone de forma exacta por dígito:
 
-- **Conclusión:**
-  - El **83.7%** del salto en test (de 88.31% a 96.50%) se debe exclusivamente al **factor externo de los datos** (aparición de la clase omitida).
-  - El **16.3%** restante (de 96.50% a 98.09%) se debe a las **técnicas de ingeniería de redes neuronales** (ReLU, arquitectura profunda jerárquica y aumento sintético de datos), necesarias para cruzar la estricta barrera del 98%.
+$$\Delta\text{acc} = \sum_c \frac{n_c}{N}\,\bigl(\text{recall}_c^{\text{Ej3}} - \text{recall}_c^{\text{Ej2}}\bigr)$$
+
+con $N = 2\,497$ y los recalls de `results/ej2_final/final_eval.json` y `results/ej3_final/final_eval.json`, promediados entre semillas (`analysis.ej3.decompose_test_gain`):
+
+| Dígito | $n_c$ | Recall Ej2 | Recall Ej3 | Aporte a $\Delta$acc (puntos) |
+| :---: | :---: | :---: | :---: | :---: |
+| 0 | 245 | 99.73% | 99.51% | $-0.02$ |
+| 1 | 283 | 99.18% | 99.93% | +0.09 |
+| 2 | 258 | 98.19% | 98.22% | +0.00 |
+| 3 | 252 | 98.54% | 99.37% | +0.08 |
+| 4 | 245 | 99.05% | 98.61% | $-0.04$ |
+| 5 | 223 | 92.68% | 96.50% | +0.34 |
+| 6 | 239 | 98.05% | 98.66% | +0.06 |
+| 7 | 257 | 98.05% | 97.98% | $-0.01$ |
+| **8** | 243 | **0.00%** | **94.07%** | **+9.15** |
+| 9 | 252 | 96.30% | 97.62% | +0.13 |
+| **Dígito 8** | 243 | | | **+9.15** |
+| **Los otros nueve** | 2 254 | | | **+0.63** |
+| **Total** (exactitud) | 2 497 | 88.31% | 98.09% | **+9.79** |
+
+Los aportes están redondeados a dos decimales; sin redondear son +9.155 y +0.633, que suman +9.788.
+
+- **Factor dato, medido:** +9.15 de los +9.79 puntos vienen del dígito 8, que `digits.csv` no tiene y `more_digits.csv` sí (585 muestras). Ninguna técnica podía recuperarlos: en Ej2 el recall del 8 es 0 por construcción y el techo era 90.27%.
+- **El resto, +0.63 puntos, mezcla dato y técnica.** Entre Ej2 Final y Ej3 Final cambian a la vez los datos de los otros nueve dígitos (más muestras: el 5 pasa de 271 a 785 y es el que más aporta, +0.34) y el modelo (ReLU `[256, 128]` con shift $\pm 1$ px en lugar de $\tanh$ `[128]` con shift $\pm 2$ px). No se evaluó en test un modelo intermedio, así que esos +0.63 no se pueden repartir entre las dos causas.
+- **Lo que sí se midió de la técnica está en validación** (sección b): sobre la unión, la configuración elegida supera a la línea base por +1.56 puntos (96.92% $\rightarrow$ 98.48%), y la línea base queda por debajo del 98%.
 
 Figura de referencia: `figures/ej3/E3-03_per_class_recall_comparison.png`.
 Ejemplos difíciles analizados: `figures/ej3/E3-05_hard_examples.png`.

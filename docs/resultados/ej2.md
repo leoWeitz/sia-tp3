@@ -24,9 +24,9 @@ Figura de referencia: `figures/ej2/E2-01_evaluation_protocol.png`.
 ### 2. Métricas Seleccionadas
 
 1. **Exactitud Global (*Accuracy*):** Métrica principal exigida para el problema.
-2. **Macro F1-Score:** Promedio no ponderado de F1 entre las 10 clases ($0 \dots 9$). Es la métrica decisiva para detectar si una clase minoritaria está siendo ignorada.
+2. **Macro F1-Score:** Promedio no ponderado de F1 entre las 10 clases ($0 \dots 9$). Es la métrica decisiva para detectar si una clase minoritaria está siendo ignorada. En validación queda en $\approx 0.85$ porque el dígito 8, que no existe en `digits.csv`, entra al promedio con F1 $= 0$: sobre las 9 clases presentes equivale a $\tfrac{10}{9}$ de ese valor ($0.853 \rightarrow 0.948$).
 3. **Sensibilidad (*Recall*) por Clase y Matriz de Confusión:** Permite diagnosticar qué dígitos específicos se confunden y cuantificar el impacto de clases escasas o ausentes.
-4. **Pérdida de Validación (MSE):** Monitoreo del costo cuadrático medio $E = \frac{1}{2m}\sum_k (y_k - \hat{y}_k)^2$ para activar *Early Stopping* con paciencia de 20 épocas y restaurar los mejores pesos.
+4. **Pérdida de Validación (MSE):** Monitoreo del costo cuadrático medio $L = \frac{1}{n\,m}\sum_{\mu}\sum_k (y_k^\mu - \hat{y}_k^\mu)^2$ (promedio sobre las $n$ muestras y las $m = 10$ salidas, sin el $\tfrac12$ de la teórica: `docs/04-matematica.md` §2.4) para activar *Early Stopping* con paciencia de 20 épocas y restaurar los mejores pesos.
 
 ---
 
@@ -88,7 +88,7 @@ Resultados en `results/ej2_extra_augmentation/summary.csv`, Figura `figures/ej2/
 | **RandomShift ($\pm 1$ px)** | 97.88% $\pm$ 0.06% | 0.00375 | 91.36% | 98.99% |
 | **RandomShift ($\pm 2$ px)** | **98.22% $\pm$ 0.35%** | **0.00377** | **93.21%** | **99.10%** |
 
-- **Conclusión:** La invariancia traslacional sintética mediante `RandomShift` fue la técnica individual más impactante de todo el estudio: **redujo el error global a más de la mitad (-54.6% relativo)** y elevó el recall de la clase minoritaria (dígito 5) en **+11.7 puntos porcentuales** (de 81.48% a 93.21%).
+- **Conclusión:** La invariancia traslacional sintética mediante `RandomShift` fue la técnica individual más impactante de todo el estudio: **redujo el error global a la mitad ($-50\%$ relativo contra la base `[128]` sin augmentation: de 3.56% a 1.78%)** y elevó el recall de la clase minoritaria (dígito 5) en **+11.7 puntos porcentuales** (de 81.48% a 93.21%).
 
 ---
 
@@ -111,13 +111,13 @@ Reporte oficial en `results/ej2_final/final_eval.json`:
 | **0** | 245 | **100.00%** | 89.09% | 0.9423 |
 | **1** | 283 | **99.65%** | 96.25% | 0.9792 |
 | **2** | 258 | **98.06%** | 87.85% | 0.9267 |
-| **3** | 254 | **99.21%** | 73.96% | 0.8475 |
-| **4** | 257 | **100.00%** | 95.33% | 0.9761 |
+| **3** | 252 | **99.21%** | 73.96% | 0.8475 |
+| **4** | 245 | **100.00%** | 95.33% | 0.9761 |
 | **5** | 223 | **93.27%** | 89.66% | 0.9143 |
 | **6** | 239 | **98.74%** | 95.16% | 0.9692 |
 | **7** | 257 | **97.67%** | 95.80% | 0.9672 |
 | **8** | 243 | **0.00%** | **0.00%** | **0.0000** |
-| **9** | 247 | **96.43%** | 79.93% | 0.8741 |
+| **9** | 252 | **96.43%** | 79.93% | 0.8741 |
 
 ### Análisis de la Cota Teórica y Discrepancia con Validación
 
@@ -126,7 +126,7 @@ Reporte oficial en `results/ej2_final/final_eval.json`:
    - Como el test tiene 243 ochos sobre 2 497 muestras ($9.73\%$), **la cota máxima teórica alcanzable en test para cualquier modelo de Ej2 es $90.27\%$**.
    - El modelo alcanzó **88.31%**, lo que representa un **$97.83\%$ de exactitud relativa** sobre las clases que sí vio.
 2. **Sobreestimación de la Validación:**
-   - En validación se midió $98.22\%$ porque el split de `digits.csv` tampoco contenía ochos. La aparente caída de rendimiento en producción no refleja sobreajuste, sino un **cambio en la distribución de entrada (*covariate/concept shift*)** provocado por la omisión de una clase entera en el conjunto de entrenamiento original.
+   - En validación se midió $98.22\%$ porque el split de `digits.csv` tampoco contenía ochos. La aparente caída de rendimiento en producción no refleja sobreajuste, sino que **el entrenamiento no es representativo: no tiene ningún 8**, y el test sí (243 de 2 497 muestras).
 
 Figuras de referencia: `figures/ej2/E2-05_test_confusion_matrix.png` y `figures/ej2/E2-06_misclassified_test.png`.
 Modelo guardado para reuso: `models/ej2_best/` (`model.npz` + `config.json`).
