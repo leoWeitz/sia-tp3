@@ -150,9 +150,9 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 | Holdout estratificado | 11.6 ± **0.28** | 0.955 ± **0.0091** | 0.01080 ± 4.6e-4 |
 | 5-fold estratificado (media de los folds) | 11.6 ± 0.32 | 0.954 ± **0.0007** | 0.01098 ± 1e-5 |
 
-- **Estratificar** hace que la validación sea representativa: la tasa de fraude varía 2.6 veces menos. En cambio, casi no reduce la varianza de la estimación del AP.
-- **El k-fold es lo que más estabiliza la estimación.** Promedia 5 validaciones que cubren todo DESARROLLO, y el desvío del AP entre semillas baja de 0.009 a 0.0007.
-- **Fracción de entrenamiento** (holdout estratificado, 50 %–90 %): el val MSE (0.0108–0.0110) y el AP (0.954–0.955) no cambian. Con 10 parámetros, 3000 filas ya alcanzan. Lo que empeora con más entrenamiento es la **incertidumbre de la validación**: el desvío del AP sube de 0.004 (validación del 50 %) a 0.012 (validación del 10 %).
+- **Estratificar** hace que la validación sea representativa: la tasa de fraude varía 2.6 veces menos. En cambio, reduce poco la varianza de la estimación: el desvío del MSE de validación entre semillas pasa de 5.5e-4 a 4.6e-4.
+- **El k-fold es lo que más estabiliza la estimación.** Promedia 5 validaciones que cubren todo DESARROLLO, y el desvío del MSE estimado entre semillas baja de ~5e-4 con un holdout 80/20 a ~1e-5.
+- **Fracción de entrenamiento** (holdout estratificado, 50 %–90 %): el val MSE (0.0108–0.0110) y el AP (0.954–0.955) no cambian. Con 10 parámetros, 3000 filas ya alcanzan. Lo que empeora con más entrenamiento es la **incertidumbre de la validación**: el desvío del MSE estimado sube de 3.1e-4 (validación del 50 %) a 7.4e-4 (validación del 10 %).
 
 **¿Cómo se elige el mejor conjunto de entrenamiento?** Tiene que ser uno *representativo* de la distribución: estratificado y lo más grande posible. No el que casualmente da mejor puntaje. Evidencia de `ej1_best_fold` (figura `E1-B-b_best_fold`):
 - **Método:** 5 particiones. En cada una se separa un pseudo-test del 20 % de DESARROLLO y se hace 5-fold sobre el resto. Se elige el fold de menor val MSE y se lo compara con un modelo entrenado con todo el resto (durante la mediana de `best_epoch`).
@@ -450,9 +450,9 @@ Selección en `ej1_cv` (5-fold estratificado × 3 semillas; η ∈ {3e-4, 1e-3, 
 | Holdout estratificado | 11.6 ± **0.28** | 0.955 ± **0.0092** | 0.01088 ± 4.9e-4 |
 | 5-fold estratificado (media de los folds) | 11.6 ± 0.32 | 0.954 ± **0.0005** | 0.01105 ± 1e-5 |
 
-- **Estratificar** hace que la validación sea representativa: la tasa de fraude varía 2.6 veces menos. En cambio, casi no reduce la varianza de la estimación del AP.
-- **El k-fold es lo que más estabiliza la estimación.** Promedia 5 validaciones que cubren todo DESARROLLO, y el desvío del AP entre semillas baja de 0.009 a 0.0005. Con un solo holdout 80/20, el AP puede salir entre 0.932 y 0.970 según la semilla.
-- **Fracción de entrenamiento** (holdout estratificado, 50 %–90 %): el val MSE (0.0109–0.0111) y el AP (0.954–0.955) no cambian. Con 7 parámetros, 2400 filas ya alcanzan. Lo que empeora con más entrenamiento es la **incertidumbre de la validación**: el desvío del AP sube de 0.004 (validación del 50 %) a 0.012 (validación del 10 %).
+- **Estratificar** hace que la validación sea representativa: la tasa de fraude varía 2.6 veces menos. En cambio, reduce poco la varianza de la estimación: el desvío del MSE de validación entre semillas pasa de 5.7e-4 a 4.9e-4.
+- **El k-fold es lo que más estabiliza la estimación.** Promedia 5 validaciones que cubren todo DESARROLLO, y el desvío del MSE estimado entre semillas baja de ~5e-4 con un holdout 80/20 a ~1e-5. Con un solo holdout 80/20, el MSE estimado puede salir entre 0.0102 y 0.0125 según la semilla.
+- **Fracción de entrenamiento** (holdout estratificado, 50 %–90 %): el val MSE (0.0109–0.0111) y el AP (0.954–0.955) no cambian. Con 7 parámetros, 2400 filas ya alcanzan. Lo que empeora con más entrenamiento es la **incertidumbre de la validación**: el desvío del MSE estimado sube de 3.1e-4 (validación del 50 %) a 7.5e-4 (validación del 10 %).
 
 **¿Cómo se elige el mejor conjunto de entrenamiento?** Tiene que ser uno *representativo* de la distribución: estratificado y lo más grande posible. No el que casualmente da mejor puntaje. Evidencia de `ej1_best_fold` (figura `E1-B-b_best_fold`):
 - **Método:** 5 particiones. En cada una se separa un pseudo-test del 20 % de DESARROLLO y se hace 5-fold sobre el resto. Se elige el fold de menor val MSE y se lo compara con un modelo entrenado con todo el resto (durante la mediana de `best_epoch`).
@@ -512,5 +512,5 @@ Si CompanyX conoce su razón de costos, elige el umbral de esa curva. Todo sale 
 **¿Es tiny?** Figura `E1-B-c_tiny`:
 - 7 parámetros.
 - `model.npz` de 12.4 KiB, que es casi todo metadata (config y scaler); los pesos son 7 floats.
-- Infiere 100 000 transacciones en unos 10 ms en una notebook. El tiempo exacto varía entre corridas y máquinas; la figura muestra la mediana de 7 repeticiones.
+- Infiere 100 000 transacciones en unos 4 ms en una notebook. El tiempo exacto varía entre corridas y máquinas; la figura muestra la mediana de 7 repeticiones.
 

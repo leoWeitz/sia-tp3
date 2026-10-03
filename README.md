@@ -285,7 +285,7 @@ Uso desde la config: `get_augmentation({"kind": "gaussian_noise", "sigma": 0.05,
   | XOR | `[2, 2, 1]` tanh, MSE, GD η = 0.1, 2000 épocas | las 4 muestras bien clasificadas | 17/20; el test exige al menos 15 (ver decisión 7) |
 
   También verifica:
-  - que el perceptrón escalón **no** pueda con XOR: nunca baja del 25% de error, porque XOR no es linealmente separable;
+  - que el perceptrón escalón **no** pueda con XOR, porque no es linealmente separable: se queda en 50 % de error en las 20 semillas (`figures/validacion/resumen.json`; el test exige que nunca baje de 1/4, la cota de cualquier recta);
   - un paso de la regla del perceptrón calculado a mano;
   - que el motor reproduzca exactamente los números de `docs/verificacion_manual.md`.
 - `test_serialization.py` (F07): guardar y cargar da las mismas predicciones, activaciones con su β e inicializador; el optimizador conserva su estado; cortar, guardar, cargar y seguir entrenando da los mismos pesos que no cortar (GD y Adam, con mini-batch); `extra` con arrays anidados, `inf`, `NaN` y enteros de 128 bits; el callback `Checkpoint`; y que `EarlyStopping` y `AdaptiveEta` sigan igual tras `state_dict` → `load_state_dict`.
