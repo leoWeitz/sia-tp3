@@ -65,12 +65,11 @@ COST_RATIO_TABLE = 5
 MIN_RECALLS = (0.8, 0.9)
 CRITERIA = (
     "f1",
-    "f2",
     "youden",
     f"cost:{COST_RATIO_TABLE}",
     *(f"precision_at_recall:{r}" for r in MIN_RECALLS),
 )
-RECOMMENDED = "f2"
+RECOMMENDED = "f1"
 TINY_ROWS = 100_000
 TINY_REPEATS = 7
 FIGURES = (
@@ -162,12 +161,12 @@ def _roc_auc(y: np.ndarray, s: np.ndarray) -> float:
 
 
 def choose_threshold(y: np.ndarray, s: np.ndarray, criterion: str) -> dict[str, Any]:
-    """Umbral elegido por un criterio de CRITERIA: 'f1', 'f2', 'youden', 'cost:<c_FN/c_FP>'
+    """Umbral elegido por un criterio de CRITERIA: 'f1', 'youden', 'cost:<c_FN/c_FP>'
     o 'precision_at_recall:<recall mínimo>' (04-matematica §7). Devuelve la fila de
     select_threshold más la clave del criterio.
     """
     name, _, param = criterion.partition(":")
-    if name in ("f1", "f2", "youden") and not param:
+    if name in ("f1", "youden") and not param:
         result = select_threshold(threshold_sweep(y, s), name)
     elif name == "cost" and param:
         result = select_threshold(threshold_sweep(y, s, cost_fn=float(param), cost_fp=1.0), "cost")
@@ -200,7 +199,6 @@ def _row(y: np.ndarray, s: np.ndarray, chosen: Mapping[str, Any]) -> dict[str, A
         "precision": chosen["precision"],
         "recall": chosen["recall"],
         "f1": chosen["f1"],
-        "f2": chosen["f2"],
         "fpr": chosen["fpr"],
         **{f"{k}_por_1000": v for k, v in per_1000(y, s, t).items()},
     }
@@ -369,7 +367,6 @@ def _binary_metrics(y: np.ndarray, s: np.ndarray, threshold: float) -> dict[str,
         "precision": float(row["precision"]),
         "recall": float(row["recall"]),
         "f1": float(row["f1"]),
-        "f2": float(row["f2"]),
         "fpr": float(row["fpr"]),
         "accuracy": (tp + tn) / len(y),
         "average_precision": _safe_ap(y, s),
@@ -656,7 +653,7 @@ def fig_threshold_metrics(
 
     sweep = threshold_sweep(y, s)
     fig, ax = plt.subplots(figsize=(11, 6))
-    for i, m in enumerate(("precision", "recall", "f1", "f2")):
+    for i, m in enumerate(("precision", "recall", "f1")):
         ax.plot(sweep["threshold"], sweep[m], color=PALETTE[i], label=m)
     for j, row in criteria.iterrows():
         rec = row["criterio"] == recommended
@@ -727,7 +724,6 @@ def fig_test_confusion(test: Mapping[str, Any]) -> Any:
         ("precision", "precision"),
         ("recall", "recall"),
         ("F1", "f1"),
-        ("F2", "f2"),
         ("FPR", "fpr"),
         ("accuracy", "accuracy"),
         ("AP", "average_precision"),

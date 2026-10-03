@@ -169,7 +169,6 @@ def test_criterios():
     table = criteria_table(y, s, cost_ratio=5)
     assert list(table["criterio"]) == [
         "f1",
-        "f2",
         "youden",
         "cost:5",
         "precision_at_recall:0.8",
@@ -178,8 +177,6 @@ def test_criterios():
     row = table.set_index("criterio")
     assert row.loc["precision_at_recall:0.9", "recall"] >= 0.9
     assert row.loc["precision_at_recall:0.8", "recall"] >= 0.8
-    # F2 pesa más el recall que F1: su umbral nunca es mayor.
-    assert row.loc["f2", "threshold"] <= row.loc["f1", "threshold"]
     assert choose_threshold(y, s, "f1")["threshold"] == row.loc["f1", "threshold"]
     with pytest.raises(ValueError):
         choose_threshold(y, s, "accuracy")
