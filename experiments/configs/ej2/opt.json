@@ -1,0 +1,55 @@
+{
+  "run_name": "ej2_opt",
+  "seeds": [0, 1, 2],
+  "dataset": {
+    "name": "digits",
+    "format": "digits",
+    "path": "datasets/digits.csv",
+    "normalize": "none",
+    "target_encoding": "onehot",
+    "n_classes": 10,
+    "split": {
+      "kind": "holdout",
+      "ratio": 0.8,
+      "stratified": true
+    }
+  },
+  "model": {
+    "layers": [784, 64, 10],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier"
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "gd",
+      "lr": 0.01
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "early_stopping": {
+      "patience": 20,
+      "monitor": "val_loss",
+      "mode": "min",
+      "restore_best": true
+    }
+  },
+  "metrics": ["accuracy", "macro_f1"],
+  "logging": {
+    "every": 10,
+    "save_model": true,
+    "save_predictions": true
+  },
+  "sweep": {
+    "training.optimizer": [
+      { "kind": "momentum", "lr": 0.01, "alpha": 0.9 },
+      { "kind": "momentum", "lr": 0.03, "alpha": 0.9 },
+      { "kind": "momentum", "lr": 0.1, "alpha": 0.9 },
+      { "kind": "rmsprop", "lr": 0.0001 },
+      { "kind": "rmsprop", "lr": 0.0003 },
+      { "kind": "rmsprop", "lr": 0.001 }
+    ]
+  }
+}
