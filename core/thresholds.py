@@ -11,9 +11,9 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
-Criterion = Literal["f1", "f2", "youden", "cost", "precision_at_recall"]
-CRITERIA = ("f1", "f2", "youden", "cost", "precision_at_recall")
-_MAXIMIZE = ("f1", "f2", "youden")
+Criterion = Literal["f1", "youden", "cost", "precision_at_recall"]
+CRITERIA = ("f1", "youden", "cost", "precision_at_recall")
+_MAXIMIZE = ("f1", "youden")
 
 DEFAULT_THRESHOLDS = np.round(np.linspace(0.0, 1.0, 101), 2)
 
@@ -57,7 +57,7 @@ def threshold_sweep(
 ) -> pd.DataFrame:
     """Una fila por umbral t (en orden creciente) con las métricas de predecir score ≥ t.
 
-    Columnas: threshold, TP, FP, TN, FN, precision, recall, f1, f2, tpr, fpr,
+    Columnas: threshold, TP, FP, TN, FN, precision, recall, f1, tpr, fpr,
     youden (= tpr − fpr) y cost (= cost_fn·FN + cost_fp·FP). División por cero
     → 0.0.
     """
@@ -78,7 +78,6 @@ def threshold_sweep(
             "precision": prec,
             "recall": rec,
             "f1": _safe_div(2 * tp, 2 * tp + fp + fn),
-            "f2": _safe_div(5 * tp, 5 * tp + 4 * fn + fp),
             "tpr": rec,
             "fpr": fpr_,
             "youden": rec - fpr_,
@@ -148,7 +147,7 @@ def select_threshold(
 ) -> dict[str, Any]:
     """Elige el umbral de un threshold_sweep según un criterio (§7).
 
-    "f1", "f2", "youden": máximo · "cost": mínimo costo (los costos se fijan en
+    "f1", "youden": máximo · "cost": mínimo costo (los costos se fijan en
     threshold_sweep) · "precision_at_recall": máxima precision con recall ≥
     min_recall. Ante empates se queda con el menor umbral. Devuelve la fila
     elegida como dict JSON ({threshold, criterion, TP, ..., cost}, más

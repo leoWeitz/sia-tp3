@@ -21,7 +21,7 @@ Metric = Callable[[np.ndarray, np.ndarray], float]
 Task = Literal["binary", "multiclass", "regression"]
 
 TASKS = ("binary", "multiclass", "regression")
-METRIC_NAMES = ("accuracy", "macro_f1", "precision", "recall", "f1", "f2", "mse", "mae")
+METRIC_NAMES = ("accuracy", "macro_f1", "precision", "recall", "f1", "mse", "mae")
 PER_CLASS_METRICS = ("precision", "recall", "f1")
 
 
@@ -86,14 +86,13 @@ def binary_counts(y_true: np.ndarray, y_pred: np.ndarray, positive: int = 1) -> 
     }
 
 
-def _fbeta_counts(tp: int, fp: int, fn: int, beta: float) -> tuple[float, bool]:
-    """F_β = (1+β²)PR / (β²P + R) = (1+β²)TP / ((1+β²)TP + β²FN + FP) (§6).
+def _f1_counts(tp: int, fp: int, fn: int) -> tuple[float, bool]:
+    """F1 = 2PR / (P + R) = 2TP / (2TP + FN + FP) (§6).
 
     La forma con conteos evita dividir por cero cuando P o R no están
     definidas; solo queda indefinida con TP = FP = FN = 0.
     """
-    b2 = beta**2
-    return _div((1 + b2) * tp, (1 + b2) * tp + b2 * fn + fp)
+    return _div(2 * tp, 2 * tp + fn + fp)
 
 
 def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -125,15 +124,10 @@ def fpr(y_true: np.ndarray, y_pred: np.ndarray, positive: int = 1) -> float:
     return _div(c["FP"], c["FP"] + c["TN"])[0]
 
 
-def fbeta(y_true: np.ndarray, y_pred: np.ndarray, beta: float, positive: int = 1) -> float:
-    """F_β (β > 1 prioriza recall); 0.0 si TP = FP = FN = 0."""
-    c = binary_counts(y_true, y_pred, positive)
-    return _fbeta_counts(c["TP"], c["FP"], c["FN"], beta)[0]
-
-
 def f1(y_true: np.ndarray, y_pred: np.ndarray, positive: int = 1) -> float:
-    """F1 = 2PR / (P + R)."""
-    return fbeta(y_true, y_pred, 1.0, positive)
+    """F1 = 2PR / (P + R); 0.0 si TP = FP = FN = 0."""
+    c = binary_counts(y_true, y_pred, positive)
+    return _f1_counts(c["TP"], c["FP"], c["FN"])[0]
 
 
 def per_class_report(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> dict[str, Any]:
@@ -153,7 +147,7 @@ def per_class_report(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> 
         values = {
             "precision": _div(tp[c], tp[c] + fp[c]),
             "recall": _div(tp[c], tp[c] + fn[c]),
-            "f1": _fbeta_counts(tp[c], fp[c], fn[c], 1.0),
+            "f1": _f1_counts(tp[c], fp[c], fn[c]),
         }
         for m, (value, ok) in values.items():
             report[m].append(value)
@@ -196,7 +190,7 @@ def classification_summary(
 
     Siempre: n, accuracy, confusion_matrix, per_class, macro_precision,
     macro_recall, macro_f1, undefined. Con n_classes = 2 agrega las binarias con
-    positivo = 1: TP, FP, TN, FN, precision, recall, f1, f2, tpr, fpr.
+    positivo = 1: TP, FP, TN, FN, precision, recall, f1, tpr, fpr.
     """
     cm = confusion_matrix(y_true, y_pred, n_classes)
     report = per_class_report(y_true, y_pred, n_classes)
@@ -214,8 +208,7 @@ def classification_summary(
         binary = {
             "precision": _div(tp, tp + fp),
             "recall": _div(tp, tp + fn),
-            "f1": _fbeta_counts(tp, fp, fn, 1.0),
-            "f2": _fbeta_counts(tp, fp, fn, 2.0),
+            "f1": _f1_counts(tp, fp, fn),
             "tpr": _div(tp, tp + fn),
             "fpr": _div(fp, fp + tn),
         }
@@ -235,9 +228,8 @@ _LABEL_METRICS: dict[str, Metric] = {
     "precision": precision,
     "recall": recall,
     "f1": f1,
-    "f2": lambda t, p: fbeta(t, p, 2.0),
 }
-_BINARY_ONLY = ("precision", "recall", "f1", "f2")
+_BINARY_ONLY = ("precision", "recall", "f1")
 
 
 def _check_task(task: str) -> None:
@@ -273,7 +265,7 @@ def get_metric(name: str, *, task: Task, threshold: float = 0.5) -> Metric:
     y_true son los targets codificados y y_pred las salidas crudas, ambos
     (n, n_salidas); se pasan a etiquetas con to_labels (el mismo threshold para
     los dos en binario). mse y mae se calculan sobre los valores crudos y
-    valen para cualquier task. precision, recall, f1 y f2 son binarias
+    valen para cualquier task. precision, recall y f1 son binarias
     (positivo = 1); en multiclase usar macro_f1.
     """
     _check_task(task)

@@ -13,7 +13,6 @@ from core.metrics import (
     classification_summary,
     confusion_matrix,
     f1,
-    fbeta,
     fpr,
     get_metric,
     macro,
@@ -68,8 +67,6 @@ def test_ejemplo_de_la_clase_perros_y_gatos():
     assert fpr(DOG_TRUE, DOG_PRED) == pytest.approx(2 / 12)
     p, r = 11 / 13, 11 / 15
     assert f1(DOG_TRUE, DOG_PRED) == pytest.approx(2 * p * r / (p + r))
-    assert fbeta(DOG_TRUE, DOG_PRED, beta=2.0) == pytest.approx(5 * p * r / (4 * p + r))
-    assert fbeta(DOG_TRUE, DOG_PRED, beta=1.0) == pytest.approx(f1(DOG_TRUE, DOG_PRED))
 
 
 def test_positive_configurable():
@@ -167,7 +164,7 @@ def test_classification_summary_serializable_y_completo():
     assert summary["precision"] == pytest.approx(11 / 13)
     assert summary["fpr"] == pytest.approx(2 / 12)
     assert summary["undefined"] == []
-    assert set(summary) >= {"macro_precision", "macro_recall", "macro_f1", "per_class", "f2"}
+    assert set(summary) >= {"macro_precision", "macro_recall", "macro_f1", "per_class", "f1"}
 
 
 def test_classification_summary_multiclase_sin_claves_binarias():
@@ -227,7 +224,7 @@ def test_get_metric_con_salidas_crudas():
     o = np.array([[0.4], [-0.2], [-0.1], [0.3]])
     assert get_metric("recall", task="binary", threshold=0.0)(t, o) == pytest.approx(0.5)
     assert get_metric("precision", task="binary", threshold=0.0)(t, o) == pytest.approx(0.5)
-    assert get_metric("f2", task="binary", threshold=0.0)(t, o) == pytest.approx(0.5)
+    assert get_metric("f1", task="binary", threshold=0.0)(t, o) == pytest.approx(0.5)
     assert get_metric("mse", task="regression")(t, o) == pytest.approx(mse(t, o))
 
 
@@ -238,7 +235,6 @@ def test_get_metric_nombres_y_errores():
         "precision",
         "recall",
         "f1",
-        "f2",
         "mse",
         "mae",
     }
@@ -327,7 +323,7 @@ def test_threshold_sweep_extremos():
     y = rng(3).integers(0, 2, size=50)
     s = rng(4).uniform(0.05, 0.9, size=50)
     df = threshold_sweep(y, s)
-    expected_cols = ["threshold", "TP", "FP", "TN", "FN", "precision", "recall", "f1", "f2",
+    expected_cols = ["threshold", "TP", "FP", "TN", "FN", "precision", "recall", "f1",
                      "tpr", "fpr", "youden", "cost"]  # fmt: skip
     assert list(df.columns) == expected_cols
     assert len(df) == 101
@@ -345,7 +341,7 @@ def test_threshold_sweep_coincide_con_metricas_de_etiquetas():
     for _, row in df.iterrows():
         pred = (s >= row["threshold"]).astype(int)
         assert row["precision"] == pytest.approx(precision(y, pred))
-        assert row["f2"] == pytest.approx(fbeta(y, pred, beta=2.0))
+        assert row["f1"] == pytest.approx(f1(y, pred))
         assert row["youden"] == pytest.approx(tpr(y, pred) - fpr(y, pred))
         counts = binary_counts(y, pred)
         assert row["cost"] == pytest.approx(5 * counts["FN"] + counts["FP"])
@@ -366,7 +362,7 @@ def test_select_threshold_costo_fn_alto_elige_umbral_menor_o_igual():
     assert t_fn < t_equal  # en este caso es estrictamente menor
 
 
-@pytest.mark.parametrize("criterion", ["f1", "f2", "youden"])
+@pytest.mark.parametrize("criterion", ["f1", "youden"])
 def test_select_threshold_maximiza(criterion):
     y, s = cost_case()
     df = threshold_sweep(y, s)
@@ -414,18 +410,15 @@ def _oracle_per_class_f1(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int)
     return float(np.mean(f1s))
 
 
-def _oracle_binary_metrics(
-    y_true: np.ndarray, y_pred: np.ndarray, beta: float = 2.0
-) -> tuple[float, float, float]:
+def _oracle_binary_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float, float]:
     tp = int(np.sum((y_true == 1) & (y_pred == 1)))
     fp = int(np.sum((y_true == 0) & (y_pred == 1)))
     fn = int(np.sum((y_true == 1) & (y_pred == 0)))
     prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    b2 = beta**2
-    denom = (1 + b2) * tp + b2 * fn + fp
-    fb = (1 + b2) * tp / denom if denom > 0 else 0.0
-    return prec, rec, fb
+    denom = 2 * tp + fn + fp
+    f = 2 * tp / denom if denom > 0 else 0.0
+    return prec, rec, f
 
 
 def _oracle_roc_auc(y_true: np.ndarray, scores: np.ndarray) -> float:
@@ -464,10 +457,10 @@ def test_oraculo_numpy():
         report = per_class_report(y_true, y_pred, 4)
         assert macro(report, "f1") == pytest.approx(_oracle_per_class_f1(y_true, y_pred, 4))
         yb, pb = (y_true == 1).astype(int), (y_pred == 1).astype(int)
-        exp_prec, exp_rec, exp_f2 = _oracle_binary_metrics(yb, pb, beta=2.0)
+        exp_prec, exp_rec, exp_f1 = _oracle_binary_metrics(yb, pb)
         assert precision(yb, pb) == pytest.approx(exp_prec)
         assert recall(yb, pb) == pytest.approx(exp_rec)
-        assert fbeta(yb, pb, 2.0) == pytest.approx(exp_f2)
+        assert f1(yb, pb) == pytest.approx(exp_f1)
 
         scores = np.round(r.uniform(size=80), 2)  # con empates
         assert auc_trapezoid(*roc_curve(yb, scores)[:2]) == pytest.approx(
