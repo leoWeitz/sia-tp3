@@ -3,6 +3,7 @@
 Genera las figuras y tablas para docs/resultados/ej2.md:
 - E2-01_evaluation_protocol: Esquema del protocolo de evaluación (F12 Parte 2).
 - E2-02_lr_optimizer: Comparativa de lr vs val_loss y val_acc para SGD y Adam.
+- E2-02b_optimizers: Mejor η de cada mecanismo de optimización (accuracy de val y épocas).
 - E2-03_architecture: Val accuracy vs parámetros (ancho y profundidad).
 - E2-04_augmentation_impact: Efecto de data augmentation y recall del dígito 5.
 - E2-05_test_confusion_matrix: Matriz de confusión en digits_test.csv.
@@ -21,8 +22,35 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from analysis.common import PALETTE, apply_style, save_figure
+from analysis.common import PALETTE, aggregate, apply_style, load_runs, save_figure
 from data.loaders import load_digits_csv
+
+# Mecanismos de optimización de E2-02b, en el orden fijo de la figura y la tabla:
+# (etiqueta, experimento, training.optimizer.kind, con η adaptativo).
+OPTIMIZER_VARIANTS = (
+    ("SGD", "ej2_lr", "gd", False),
+    ("Momentum", "ej2_opt", "momentum", False),
+    ("RMSProp", "ej2_opt", "rmsprop", False),
+    ("Adam", "ej2_lr", "adam", False),
+    ("SGD + η adaptativo", "ej2_eta_adapt", "gd", True),
+)
+# El color sigue al optimizador: Adam y SGD llevan los mismos que en E2-02.
+OPTIMIZER_COLORS = {
+    "Adam": PALETTE[0],
+    "SGD": PALETTE[1],
+    "Momentum": PALETTE[2],
+    "RMSProp": PALETTE[3],
+    "SGD + η adaptativo": PALETTE[4],
+}
+_OPTIMIZER_METRICS = (
+    "val.accuracy",
+    "val.loss",
+    "val.macro_f1",
+    "best_epoch",
+    "epochs_trained",
+    "lr_final",
+)
+_ADAPTIVE_ETA_PARAMS = ("a", "b", "k", "k_prime")
 
 
 def plot_protocol(out_dir: Path) -> Path:
@@ -157,6 +185,143 @@ def plot_lr_optimizer(results_dir: Path, out_dir: Path) -> Path:
 
     fig.tight_layout()
     return save_figure(fig, out_dir / "E2-02_lr_optimizer")
+
+
+def best_per_optimizer(results_dir: Path) -> pd.DataFrame:
+    """Mejor configuración de cada mecanismo de optimización (OPTIMIZER_VARIANTS, en ese orden).
+
+    "Mejor" = mayor accuracy media de validación entre las configuraciones del
+    mecanismo sin corridas divergidas (si todas divergieron, entre todas).
+    Columnas: label, experiment, hash, lr (η inicial), alpha y a/b/k/k_prime
+    (NaN donde no aplican), n_configs (configuraciones comparadas), n
+    (semillas), n_stopped (corridas que cortó el early stopping) y <m>_mean,
+    <m>_std (ddof = 1), <m>_min, <m>_max de val.accuracy, val.loss,
+    val.macro_f1, best_epoch, epochs_trained y lr_final.
+    """
+    rows = []
+    for label, experiment, kind, adaptive in OPTIMIZER_VARIANTS:
+        runs = load_runs(results_dir / experiment)
+        if not runs.empty:
+            adaptive_column = "training.adaptive_eta.a"
+            has_adaptive = (
+                runs[adaptive_column].notna()
+                if adaptive_column in runs
+                else pd.Series(False, index=runs.index)
+            )
+            runs = runs[(runs["training.optimizer.kind"] == kind) & (has_adaptive == adaptive)]
+        if runs.empty:
+            raise FileNotFoundError(
+                f"{results_dir / experiment}: no hay corridas terminadas de {label!r}"
+            )
+
+        metrics = [m for m in _OPTIMIZER_METRICS if m in runs]
+        stats = aggregate(runs, "hash", metrics).set_index("hash")
+        groups = runs.groupby("hash")
+        stats["n_stopped"] = groups["stopped_epoch"].apply(lambda s: int(s.notna().sum()))
+        all_ok = groups["status"].apply(lambda s: bool((s == "ok").all()))
+        candidates = stats[all_ok] if all_ok.any() else stats
+        best = candidates["val.accuracy_mean"].idxmax()
+        config = runs[runs["hash"] == best].iloc[0]
+        rows.append(
+            {
+                "label": label,
+                "experiment": experiment,
+                "hash": best,
+                "lr": config["training.optimizer.lr"],
+                "alpha": config.get("training.optimizer.alpha", np.nan),
+                **{
+                    p: config.get(f"training.adaptive_eta.{p}", np.nan)
+                    for p in _ADAPTIVE_ETA_PARAMS
+                },
+                "n_configs": len(stats),
+                **stats.loc[best].to_dict(),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _optimizer_tick(row: pd.Series) -> str:
+    """Rótulo de dos líneas: el mecanismo y los hiperparámetros de su mejor configuración."""
+    if not np.isnan(row["a"]):
+        detail = (
+            f"η₀ = {row['lr']:g}, a = {row['a']:g}, b = {row['b']:g}, "
+            f"k = {row['k']:g}, k′ = {row['k_prime']:g}"
+        )
+    elif not np.isnan(row["alpha"]):
+        detail = f"η = {row['lr']:g}, α = {row['alpha']:g}"
+    else:
+        detail = f"η = {row['lr']:g}"
+    return f"{row['label']}\n{detail}"
+
+
+def plot_optimizers(results_dir: Path, out_dir: Path) -> list[Path]:
+    """Accuracy de validación y épocas hasta el corte del mejor η de cada optimizador.
+
+    Dos paneles con los mecanismos en el mismo orden: media ± desvío entre
+    semillas de la accuracy de validación y de las épocas entrenadas hasta que
+    cortó el early stopping (o hasta agotar las épocas, que se indica).
+    """
+    apply_style()
+    best = best_per_optimizer(results_dir)
+    y = np.arange(len(best))[::-1]  # el primer mecanismo, arriba
+    colors = [OPTIMIZER_COLORS[label] for label in best["label"]]
+    acc_m = best["val.accuracy_mean"].to_numpy() * 100.0
+    acc_s = best["val.accuracy_std"].to_numpy() * 100.0
+    ep_m = best["epochs_trained_mean"].to_numpy()
+    ep_s = best["epochs_trained_std"].to_numpy()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.4), sharey=True)
+
+    for i in range(len(best)):
+        ax1.errorbar(
+            acc_m[i], y[i], xerr=acc_s[i], fmt="o", color=colors[i], markersize=9, capsize=4, lw=2
+        )
+        ax1.annotate(
+            f"{acc_m[i]:.2f} ± {acc_s[i]:.2f}",
+            (acc_m[i], y[i]),
+            xytext=(0, 11),
+            textcoords="offset points",
+            ha="center",
+            fontsize=11,
+        )
+    ax1.margins(x=0.25, y=0.14)
+    ax1.set_yticks(y)
+    ax1.set_yticklabels([_optimizer_tick(row) for _, row in best.iterrows()], fontsize=11)
+    ax1.set_xlabel("Exactitud de validación (%)")
+    ax1.set_title("Exactitud de Validación")
+    ax1.grid(axis="y", visible=False)
+
+    ax2.barh(y, ep_m, xerr=ep_s, height=0.45, color=colors, ecolor="#52514e", capsize=4)
+    for i, (_, row) in enumerate(best.iterrows()):
+        text = f"{ep_m[i]:.0f} ± {ep_s[i]:.0f}"
+        if row["n_stopped"] < row["n"]:
+            text += f" (sin corte en {row['n'] - row['n_stopped']:.0f} de {row['n']:.0f})"
+        ax2.annotate(
+            text,
+            (ep_m[i] + ep_s[i], y[i]),
+            xytext=(6, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=11,
+        )
+    ax2.margins(x=0.22)
+    ax2.set_xlabel("Épocas entrenadas")
+    ax2.set_title("Épocas hasta Early Stopping")
+    ax2.grid(axis="y", visible=False)
+
+    fig.suptitle("Mejor η de Cada Mecanismo de Optimización", fontsize=16, weight="bold")
+    fig.text(
+        0.5,
+        0.005,
+        f"Red [784, 64, 10] · tanh + sigmoide · MSE · lote 32 · early stopping con paciencia 20 · "
+        f"media ± desvío entre {best['n'].min():.0f} semillas",
+        ha="center",
+        fontsize=10,
+        style="italic",
+        color="#52514e",
+    )
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    return save_figure(fig, out_dir / "E2-02b_optimizers")
 
 
 def plot_architecture(results_dir: Path, out_dir: Path) -> Path:
@@ -394,6 +559,9 @@ def main() -> int:
 
     plot_lr_optimizer(args.results_dir, args.out_dir)
     print("✓ E2-02_lr_optimizer")
+
+    plot_optimizers(args.results_dir, args.out_dir)
+    print("✓ E2-02b_optimizers")
 
     plot_architecture(args.results_dir, args.out_dir)
     print("✓ E2-03_architecture")
