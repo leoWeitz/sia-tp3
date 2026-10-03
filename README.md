@@ -1,5 +1,22 @@
 # TP3 SIA — Perceptrón Simple y Multicapa
 
+## Datos
+
+Los CSV de la cátedra no se versionan: cada integrante los copia del campus a `datasets/`.
+
+| Archivo | Se usa en |
+| --- | --- |
+| `fraud_dataset.csv` | Ej. 1 |
+| `digits.csv` | Ej. 2 y Ej. 3 |
+| `digits_test.csv` | Test de los Ej. 2 y 3 (solo con `--final-eval`) |
+| `more_digits.csv` | Ej. 3 |
+
+Antes de correr el Ej. 3 hay que armar `datasets/digits_union.csv`, la unión de `digits.csv` y `more_digits.csv` sin las 3 689 imágenes repetidas (24 501 filas):
+
+```bash
+python -m data.build_digits_union
+```
+
 ## Setup
 
 ```bash
