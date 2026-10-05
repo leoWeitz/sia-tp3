@@ -18,6 +18,7 @@ from analysis.ej1_generalization import (
     choose_threshold,
     cost_sensitivity,
     criteria_table,
+    fig_split_strategy,
     main,
     near_cut_fraction,
     oof_predictions,
@@ -233,6 +234,44 @@ def test_split_estimates_promedia_los_folds_de_cada_semilla(tmp_path):
     assert estimates["mse"].tolist() == pytest.approx([0.15, 0.15])
     assert set(partitions["fraud_rate"]) == {0.5}
     assert set(estimates["strategy"]) == {"2-fold estratificado"}
+
+
+def test_fig_split_strategy_muestra_el_mse_de_validacion_por_semilla():
+    import matplotlib.pyplot as plt
+
+    strategies = {
+        "holdout aleatorio": 0.8,
+        "holdout estratificado": 0.8,
+        "5-fold estratificado": None,
+    }
+    rows = [
+        {
+            "strategy": strategy,
+            "ratio": np.nan if ratio is None else ratio,
+            "seed": seed,
+            "fraud_rate": 0.10 + 0.01 * seed,
+            "ap": 0.95,
+            "mse": 0.011 + 0.001 * seed + 0.0001 * i,
+            "train_mse": 0.011,
+        }
+        for i, (strategy, ratio) in enumerate(strategies.items())
+        for seed in range(3)
+    ]
+    # Una fracción de entrenamiento distinta de 80/20 no entra a esta figura.
+    rows.append({**rows[3], "ratio": 0.5, "mse": 0.5})
+    estimates = pd.DataFrame(rows)
+
+    fig = fig_split_strategy(estimates, estimates)
+    left, right = fig.axes
+    assert "MSE de validación" in left.get_ylabel() and "AP" not in left.get_ylabel()
+    assert "10⁻³" in left.get_ylabel()
+    # La mediana de cada caja es el MSE de la semilla del medio, en unidades de 1e-3.
+    drawn = [np.asarray(line.get_ydata(), dtype=float) for line in left.lines]
+    flat = [y[0] for y in drawn if y.size and np.ptp(y) == 0]  # medianas y topes de los bigotes
+    assert pytest.approx(12.0) in flat and pytest.approx(12.1) in flat
+    assert max(y.max() for y in drawn if y.size) < 100  # sin la fila de ratio 0.5
+    assert "fraude" in right.get_ylabel()
+    plt.close(fig)
 
 
 # --- corrida completa ---

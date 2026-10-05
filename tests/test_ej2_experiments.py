@@ -11,13 +11,15 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from data.loaders import DIGITS_N_PIXELS
-from experiments.config import load_config
+from experiments.config import expand, load_config, run_id
 from experiments.runner import run_experiment
 
 ROOT = Path(__file__).parents[1]
-BASE_CONFIG_PATH = ROOT / "experiments/configs/ej2/base.json"
+CONFIG_DIR = ROOT / "experiments/configs/ej2"
+BASE_CONFIG_PATH = CONFIG_DIR / "base.json"
 
 
 def synthetic_digits_csv(path: Path, n_samples: int = 40, seed: int = 0) -> None:
@@ -97,6 +99,57 @@ def test_lr_config_existe_y_valida_sweep():
     assert "training.optimizer.kind" in config["sweep"]
     assert "training.optimizer.lr" in config["sweep"]
     assert set(config["sweep"]["training.optimizer.kind"]) == {"gd", "adam"}
+
+
+def _sin_barrido(config: dict) -> dict:
+    """La config sin lo que cambia entre experimentos del estudio OFAT."""
+    out = {k: v for k, v in config.items() if k not in ("run_name", "sweep")}
+    out["training"] = {
+        k: v for k, v in config["training"].items() if k not in ("optimizer", "adaptive_eta")
+    }
+    return out
+
+
+@pytest.mark.parametrize("name", ["opt", "eta_adapt"])
+def test_configs_de_optimizacion_solo_cambian_el_optimizador(name):
+    lr = load_config(CONFIG_DIR / "lr.json")
+    config = load_config(CONFIG_DIR / f"{name}.json")
+    assert config["run_name"] == f"ej2_{name}"
+    # Misma red, datos, semillas y early stopping que ej2_lr: comparables entre sí.
+    assert _sin_barrido(config) == _sin_barrido(lr)
+    ds = config["dataset"]
+    assert "digits_test.csv" not in str(ds["path"])
+    assert ds["holdout_test"] is None and ds["test_path"] is None
+
+
+def test_opt_config_mini_barrido_de_tres_eta_por_optimizador():
+    config = load_config(CONFIG_DIR / "opt.json")
+    assert list(config["sweep"]) == ["training.optimizer"]
+    optimizers = config["sweep"]["training.optimizer"]
+    by_kind: dict[str, list[dict]] = {}
+    for optimizer in optimizers:
+        by_kind.setdefault(optimizer["kind"], []).append(optimizer)
+    assert set(by_kind) == {"momentum", "rmsprop"}
+    assert sorted(o["lr"] for o in by_kind["momentum"]) == [0.01, 0.03, 0.1]
+    assert sorted(o["lr"] for o in by_kind["rmsprop"]) == [0.0001, 0.0003, 0.001]
+    assert all(o["alpha"] == 0.9 for o in by_kind["momentum"])
+    runs = expand(config)
+    assert len(runs) == len(optimizers) * len(config["seeds"]) == 18
+    assert len({run_id(r) for r in runs}) == 18
+
+
+def test_eta_adapt_config_barre_el_eta_adaptativo_sobre_gd():
+    config = load_config(CONFIG_DIR / "eta_adapt.json")
+    assert config["training"]["optimizer"] == {"kind": "gd", "lr": 0.1}
+    assert list(config["sweep"]) == ["training.adaptive_eta"]
+    combos = config["sweep"]["training.adaptive_eta"]
+    assert combos == [
+        {"a": 0.01, "b": 0.1, "k": 5, "k_prime": 3},
+        {"a": 0.05, "b": 0.5, "k": 3, "k_prime": 2},
+    ]
+    runs = expand(config)
+    assert len(runs) == len(combos) * len(config["seeds"]) == 6
+    assert all(r["training"]["adaptive_eta"]["monitor"] == "train_loss" for r in runs)
 
 
 # --- Smoke test del runner con formato digits en tmp_path ---

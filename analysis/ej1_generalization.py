@@ -522,8 +522,10 @@ def fig_split_strategy(partitions: pd.DataFrame, estimates: pd.DataFrame) -> Any
     parts = partitions[(partitions["ratio"].isna()) | (partitions["ratio"] == 0.8)]
     order = [s for s in STRATEGY_ORDER if s in set(main["strategy"])]
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
-    ax1.boxplot([main.loc[main["strategy"] == s, "ap"].dropna() for s in order], tick_labels=order)
-    ax1.set_ylabel("AP en validación (una estimación por semilla)")
+    ax1.boxplot(
+        [main.loc[main["strategy"] == s, "mse"].dropna() * 1e3 for s in order], tick_labels=order
+    )
+    ax1.set_ylabel("MSE de validación (×10⁻³)\nuna estimación por semilla")
     ax1.set_title("Estimación de la generalización")
     ax2.boxplot(
         [parts.loc[parts["strategy"] == s, "fraud_rate"] * 100 for s in order], tick_labels=order

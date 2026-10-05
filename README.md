@@ -1,5 +1,22 @@
 # TP3 SIA — Perceptrón Simple y Multicapa
 
+## Datos
+
+Los CSV de la cátedra no se versionan: cada integrante los copia del campus a `datasets/`.
+
+| Archivo | Se usa en |
+| --- | --- |
+| `fraud_dataset.csv` | Ej. 1 |
+| `digits.csv` | Ej. 2 y Ej. 3 |
+| `digits_test.csv` | Test de los Ej. 2 y 3 (solo con `--final-eval`) |
+| `more_digits.csv` | Ej. 3 |
+
+Antes de correr el Ej. 3 hay que armar `datasets/digits_union.csv`, la unión de `digits.csv` y `more_digits.csv` sin las 3 689 imágenes repetidas (24 501 filas):
+
+```bash
+python -m data.build_digits_union
+```
+
 ## Setup
 
 ```bash
@@ -285,7 +302,7 @@ Uso desde la config: `get_augmentation({"kind": "gaussian_noise", "sigma": 0.05,
   | XOR | `[2, 2, 1]` tanh, MSE, GD η = 0.1, 2000 épocas | las 4 muestras bien clasificadas | 17/20; el test exige al menos 15 (ver decisión 7) |
 
   También verifica:
-  - que el perceptrón escalón **no** pueda con XOR: nunca baja del 25% de error, porque XOR no es linealmente separable;
+  - que el perceptrón escalón **no** pueda con XOR, porque no es linealmente separable: se queda en 50 % de error en las 20 semillas (`figures/validacion/resumen.json`; el test exige que nunca baje de 1/4, la cota de cualquier recta);
   - un paso de la regla del perceptrón calculado a mano;
   - que el motor reproduzca exactamente los números de `docs/verificacion_manual.md`.
 - `test_serialization.py` (F07): guardar y cargar da las mismas predicciones, activaciones con su β e inicializador; el optimizador conserva su estado; cortar, guardar, cargar y seguir entrenando da los mismos pesos que no cortar (GD y Adam, con mini-batch); `extra` con arrays anidados, `inf`, `NaN` y enteros de 128 bits; el callback `Checkpoint`; y que `EarlyStopping` y `AdaptiveEta` sigan igual tras `state_dict` → `load_state_dict`.

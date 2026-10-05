@@ -185,7 +185,7 @@ def _synthetic_csv(path: Path, n: int = 300) -> None:
 
 
 def _small_config(name: str, csv: Path, out: Path) -> Path:
-    config = json.loads(CONFIGS[name].read_text())
+    config = json.loads(CONFIGS[name].read_text(encoding="utf-8"))
     config["dataset"]["path"] = str(csv)
     config["seeds"] = [0, 1]
     config["training"]["epochs"] = 10 if name == "ej1_long" else 5
@@ -212,7 +212,7 @@ def test_main_genera_todas_las_figuras(tmp_path):
     for name in FIGURES:
         assert (out / f"{name}.png").exists(), name
         assert (out / f"{name}.pdf").exists(), name
-    resumen = json.loads((out / "resumen.json").read_text())
+    resumen = json.loads((out / "resumen.json").read_text(encoding="utf-8"))
     assert set(resumen["mejor"]) == {"lineal", "logística"}
     assert resumen["referencias"]["minimos_cuadrados"] <= resumen["referencias"]["constante"]
     assert len(pd.read_csv(out / "tabla.csv")) == 4
