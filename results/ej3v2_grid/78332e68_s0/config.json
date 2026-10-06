@@ -1,0 +1,139 @@
+{
+  "run_name": "ej3v2_grid",
+  "seed": 0,
+  "fold": null,
+  "trainer": "backprop",
+  "dataset": {
+    "name": "digits_union",
+    "format": "digits",
+    "path": "datasets/digits_union.csv",
+    "synthetic": null,
+    "target": null,
+    "features": null,
+    "drop": [],
+    "categorical": [],
+    "na_policy": "error",
+    "task": "auto",
+    "n_classes": 10,
+    "normalize": "none",
+    "feature_range": null,
+    "target_encoding": "onehot",
+    "target_in_range": null,
+    "split": {
+      "kind": "holdout",
+      "ratio": 0.8,
+      "stratified": true,
+      "seed": null
+    },
+    "holdout_test": null,
+    "test_path": null
+  },
+  "model": {
+    "layers": [
+      784,
+      128,
+      10
+    ],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier",
+    "init_params": {}
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.001
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "l2": 0.0,
+    "augmentation": {
+      "kind": "random_shift",
+      "max_px": 1,
+      "image_shape": [
+        28,
+        28
+      ]
+    },
+    "early_stopping": {
+      "patience": 20,
+      "monitor": "val_loss",
+      "mode": "min",
+      "min_delta": 0.0,
+      "restore_best": true
+    },
+    "adaptive_eta": null
+  },
+  "metrics": [
+    "accuracy",
+    "macro_f1"
+  ],
+  "logging": {
+    "every": 10,
+    "save_model": true,
+    "save_predictions": true,
+    "checkpoint_every": 50,
+    "save_weights_history": false
+  },
+  "sweep": {
+    "model": [
+      {
+        "hidden_activation": "tanh",
+        "output_activation": "sigmoid",
+        "beta": 1.0,
+        "initializer": "xavier"
+      },
+      {
+        "hidden_activation": "relu",
+        "output_activation": "sigmoid",
+        "beta": 1.0,
+        "initializer": "he"
+      }
+    ],
+    "model.layers": [
+      [
+        784,
+        128,
+        10
+      ],
+      [
+        784,
+        256,
+        10
+      ],
+      [
+        784,
+        128,
+        64,
+        32,
+        10
+      ],
+      [
+        784,
+        256,
+        128,
+        10
+      ]
+    ],
+    "training.optimizer.lr": [
+      0.0001,
+      0.0003,
+      0.001
+    ],
+    "training.augmentation": [
+      null,
+      {
+        "kind": "random_shift",
+        "max_px": 1
+      },
+      {
+        "kind": "random_shift",
+        "max_px": 2
+      }
+    ]
+  },
+  "selected_from": null,
+  "final": null
+}
