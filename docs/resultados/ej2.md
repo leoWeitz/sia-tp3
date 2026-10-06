@@ -200,4 +200,4 @@ Frente a la 1ª evaluación, la mejora (+0.37 puntos) está sobre todo en el dí
 3. **La grilla mejora poco en test.** Medio punto de validación se tradujo en 0.37 puntos de test: con el 8 ausente, el límite lo ponen los datos, no la configuración.
 
 Figuras de referencia (2ª evaluación): `figures/ej2/grid/E2-05_test_confusion_matrix.png` y `figures/ej2/grid/E2-06_misclassified_test.png`. Las de la 1ª evaluación siguen en `figures/ej2/`.
-Modelo guardado para reuso: `models/ej2_best/` (`model.npz` + `config.json`). **Corresponde todavía a la 1ª evaluación**; falta reemplazarlo por `results/ej2_final_grid/final_s0/model.npz`.
+Modelo guardado para reuso: `models/ej2_best/` (`model.npz` + `config.json`), copia de `results/ej2_final_grid/final_s0` (2ª evaluación, semilla 0: 88.79% en test).

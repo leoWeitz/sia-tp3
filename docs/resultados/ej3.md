@@ -40,7 +40,7 @@ El modelo se mantiene en el marco de la cátedra (salida logística + MSE, sin s
 - **Épocas de reentrenamiento:** 43 (mediana de `best_epoch` de las 3 corridas de validación: 43, 69 y 36).
 - **Config:** `experiments/configs/ej3/final_v2.json`.
 
-`models/ej3_best/` **corresponde todavía a la 1ª evaluación**; falta reemplazarlo por `results/ej3v2_final/final_s3/model.npz` (la mejor semilla en test, 98.60%) o por la semilla 0.
+Modelo guardado para reuso: `models/ej3_best/` (`model.npz` + `config.json`), copia de `results/ej3v2_final/final_s3` (2ª evaluación, semilla 3: 98.60% en test, la mejor de las 5; como en la 1ª evaluación, se guarda la mejor semilla).
 
 ### 3. Desempeño por Clase en Test (2ª evaluación, media de 5 semillas)
 
