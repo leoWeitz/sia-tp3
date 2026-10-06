@@ -1,0 +1,178 @@
+{
+  "run_name": "ej2_combo",
+  "seed": 0,
+  "fold": null,
+  "trainer": "backprop",
+  "dataset": {
+    "name": "digits",
+    "format": "digits",
+    "path": "datasets/digits.csv",
+    "synthetic": null,
+    "target": null,
+    "features": null,
+    "drop": [],
+    "categorical": [],
+    "na_policy": "error",
+    "task": "auto",
+    "n_classes": 10,
+    "normalize": "none",
+    "feature_range": null,
+    "target_encoding": "onehot",
+    "target_in_range": null,
+    "split": {
+      "kind": "holdout",
+      "ratio": 0.8,
+      "stratified": true,
+      "seed": null
+    },
+    "holdout_test": null,
+    "test_path": null
+  },
+  "model": {
+    "layers": [
+      784,
+      128,
+      10
+    ],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier",
+    "init_params": {}
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "rmsprop",
+      "lr": 0.0003
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "l2": 0.0,
+    "augmentation": {
+      "kind": "random_shift",
+      "max_px": 1,
+      "image_shape": [
+        28,
+        28
+      ]
+    },
+    "early_stopping": {
+      "patience": 20,
+      "monitor": "val_loss",
+      "mode": "min",
+      "min_delta": 0.0,
+      "restore_best": true
+    },
+    "adaptive_eta": null
+  },
+  "metrics": [
+    "accuracy",
+    "macro_f1"
+  ],
+  "logging": {
+    "every": 10,
+    "save_model": true,
+    "save_predictions": true,
+    "checkpoint_every": 50,
+    "save_weights_history": false
+  },
+  "sweep": {
+    "training.optimizer": [
+      {
+        "kind": "gd",
+        "lr": 0.1
+      },
+      {
+        "kind": "gd",
+        "lr": 0.3
+      },
+      {
+        "kind": "gd",
+        "lr": 1.0
+      },
+      {
+        "kind": "momentum",
+        "lr": 0.03,
+        "alpha": 0.9
+      },
+      {
+        "kind": "momentum",
+        "lr": 0.1,
+        "alpha": 0.9
+      },
+      {
+        "kind": "momentum",
+        "lr": 0.3,
+        "alpha": 0.9
+      },
+      {
+        "kind": "rmsprop",
+        "lr": 0.0003
+      },
+      {
+        "kind": "rmsprop",
+        "lr": 0.001
+      },
+      {
+        "kind": "rmsprop",
+        "lr": 0.003
+      },
+      {
+        "kind": "adam",
+        "lr": 0.0003
+      },
+      {
+        "kind": "adam",
+        "lr": 0.001
+      },
+      {
+        "kind": "adam",
+        "lr": 0.003
+      }
+    ],
+    "model.layers": [
+      [
+        784,
+        64,
+        10
+      ],
+      [
+        784,
+        128,
+        10
+      ],
+      [
+        784,
+        256,
+        10
+      ],
+      [
+        784,
+        128,
+        64,
+        32,
+        10
+      ],
+      [
+        784,
+        256,
+        128,
+        10
+      ]
+    ],
+    "training.augmentation": [
+      null,
+      {
+        "kind": "random_shift",
+        "max_px": 1
+      },
+      {
+        "kind": "random_shift",
+        "max_px": 2
+      }
+    ]
+  },
+  "selected_from": null,
+  "final": null
+}
