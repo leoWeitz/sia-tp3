@@ -1,0 +1,79 @@
+{
+  "run_name": "ej3v2_final_ej2_config",
+  "seed": 0,
+  "fold": null,
+  "trainer": "backprop",
+  "dataset": {
+    "name": "digits_union",
+    "format": "digits",
+    "path": "datasets/digits_union.csv",
+    "synthetic": null,
+    "target": null,
+    "features": null,
+    "drop": [],
+    "categorical": [],
+    "na_policy": "error",
+    "task": "auto",
+    "n_classes": 10,
+    "normalize": "none",
+    "feature_range": null,
+    "target_encoding": "onehot",
+    "target_in_range": null,
+    "split": {
+      "kind": "none"
+    },
+    "holdout_test": null,
+    "test_path": "datasets/digits_test.csv"
+  },
+  "model": {
+    "layers": [
+      784,
+      256,
+      128,
+      10
+    ],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier",
+    "init_params": {}
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.0003
+    },
+    "batch_size": 32,
+    "epochs": 96,
+    "l2": 0.0,
+    "augmentation": {
+      "kind": "random_shift",
+      "max_px": 2,
+      "image_shape": [
+        28,
+        28
+      ]
+    },
+    "early_stopping": null,
+    "adaptive_eta": null
+  },
+  "metrics": [
+    "accuracy",
+    "macro_f1"
+  ],
+  "logging": {
+    "every": 10,
+    "save_model": true,
+    "save_predictions": true,
+    "checkpoint_every": 50,
+    "save_weights_history": false
+  },
+  "sweep": {},
+  "selected_from": "results/ej3v2_ej2_config/746b3146",
+  "final": {
+    "mode": "retrain",
+    "epochs": null,
+    "threshold": null
+  }
+}

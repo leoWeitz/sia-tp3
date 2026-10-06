@@ -1,0 +1,108 @@
+{
+  "run_name": "ej3v2_grid",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "dataset": {
+    "name": "digits_union",
+    "format": "digits",
+    "path": "datasets/digits_union.csv",
+    "normalize": "none",
+    "target_encoding": "onehot",
+    "n_classes": 10,
+    "split": {
+      "kind": "holdout",
+      "ratio": 0.8,
+      "stratified": true
+    }
+  },
+  "model": {
+    "layers": [
+      784,
+      256,
+      128,
+      10
+    ],
+    "hidden_activation": "tanh",
+    "output_activation": "sigmoid",
+    "beta": 1.0,
+    "initializer": "xavier"
+  },
+  "training": {
+    "loss": "mse",
+    "optimizer": {
+      "kind": "adam",
+      "lr": 0.0003
+    },
+    "batch_size": 32,
+    "epochs": 300,
+    "early_stopping": {
+      "patience": 20,
+      "monitor": "val_loss",
+      "mode": "min",
+      "restore_best": true
+    }
+  },
+  "metrics": [
+    "accuracy",
+    "macro_f1"
+  ],
+  "logging": {
+    "every": 10,
+    "save_model": true,
+    "save_predictions": true
+  },
+  "sweep": {
+    "model": [
+      {
+        "hidden_activation": "tanh",
+        "output_activation": "sigmoid",
+        "beta": 1.0,
+        "initializer": "xavier"
+      },
+      {
+        "hidden_activation": "relu",
+        "output_activation": "sigmoid",
+        "beta": 1.0,
+        "initializer": "he"
+      }
+    ],
+    "model.layers": [
+      [
+        784,
+        128,
+        10
+      ],
+      [
+        784,
+        256,
+        10
+      ],
+      [
+        784,
+        128,
+        64,
+        32,
+        10
+      ],
+      [
+        784,
+        256,
+        128,
+        10
+      ]
+    ],
+    "training.optimizer.lr": [
+      0.0003,
+      0.001
+    ],
+    "training.augmentation": [
+      {
+        "kind": "random_shift",
+        "max_px": 1
+      }
+    ]
+  }
+}

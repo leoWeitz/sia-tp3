@@ -32,7 +32,10 @@ Figura de referencia: `figures/ej2/E2-01_evaluation_protocol.png`.
 
 ## (b) Estudio de Variantes e Hiperparámetros (OFAT)
 
-Se exploraron sistemáticamente los factores de aprendizaje, arquitectura y regularización partiendo de la configuración canónica de la cátedra (`[784, 64, 10]`, $\tanh$ oculta, sigmoide de salida + MSE, Xavier init, batch 32).
+El estudio se hizo en dos etapas:
+
+1. **Barrido por bloques** (secciones 1–3): optimizador × $\eta$ con la red fija, después arquitectura y después augmentation, partiendo de la configuración canónica de la cátedra (`[784, 64, 10]`, $\tanh$ oculta, sigmoide de salida + MSE, Xavier init, batch 32).
+2. **Grilla completa** (sección 4): optimizador × $\eta$ × arquitectura × augmentation cruzados, para medir las interacciones que el barrido por bloques no ve. La sección 5 justifica fijar $\tanh$ en la grilla. **La configuración final sale de la grilla** (sección c).
 
 ### 1. Tasa de Aprendizaje y Optimizadores
 
@@ -90,43 +93,111 @@ Resultados en `results/ej2_extra_augmentation/summary.csv`, Figura `figures/ej2/
 
 - **Conclusión:** La invariancia traslacional sintética mediante `RandomShift` fue la técnica individual más impactante de todo el estudio: **redujo el error global a la mitad ($-50\%$ relativo contra la base `[128]` sin augmentation: de 3.56% a 1.78%)** y elevó el recall de la clase minoritaria (dígito 5) en **+11.7 puntos porcentuales** (de 81.48% a 93.21%).
 
+### 4. Grilla Completa: Optimizador × $\eta$ × Arquitectura × Augmentation
+
+El barrido por bloques supone que los factores no interactúan, y fijó cada bloque con lo mejor del anterior (por ejemplo, el augmentation solo se probó sobre `[128]`). Para medir las interacciones se cruzaron todos (`experiments/configs/ej2/combo.json`, `results/ej2_combo/summary.csv`):
+
+- **Optimizador y $\eta$ (12):** SGD $\{0.1, 0.3, 1\}$, Momentum ($\alpha = 0.9$) $\{0.03, 0.1, 0.3\}$, RMSProp $\{3\cdot10^{-4}, 10^{-3}, 3\cdot10^{-3}\}$, Adam $\{3\cdot10^{-4}, 10^{-3}, 3\cdot10^{-3}\}$. Cada optimizador con su propia escala de $\eta$.
+- **Arquitectura (5):** `[64]`, `[128]`, `[256]`, `[128, 64, 32]`, `[256, 128]`.
+- **Augmentation (3):** sin shift, `RandomShift` $\pm 1$ px, $\pm 2$ px.
+- **Fijo:** $\tanh$ + Xavier, sigmoide de salida + MSE, lote 32, early stopping (paciencia 20, máximo 300 épocas).
+
+Son 180 configuraciones × 3 semillas = **540 corridas, todas `ok`** (ninguna divergió). Usan los mismos splits que las secciones 1–3: las configuraciones repetidas dan exactamente los mismos números.
+
+Figuras y tablas en `figures/ej2/grid/`, generadas por `python -m analysis.ej2_grid` (`ranking.csv` con las 180 configuraciones, `efectos.csv`).
+
+**Las 5 mejores** (exactitud de validación, media $\pm$ desvío entre 3 semillas; Figura `E2-G1_ranking`):
+
+| # | Optimizador | Red | Augmentation | Val Accuracy | Épocas hasta early stopping |
+| :---: | :--- | :--- | :--- | :---: | :---: |
+| 1 | **Adam $\eta = 3\cdot10^{-4}$** | **`[256, 128]`** | **shift $\pm 2$ px** | **98.69% $\pm$ 0.34%** | 148 |
+| 2 | SGD $\eta = 1$ | `[256, 128]` | shift $\pm 2$ px | 98.62% $\pm$ 0.37% | 154 |
+| 3 | RMSProp $\eta = 3\cdot10^{-4}$ | `[256, 128]` | shift $\pm 2$ px | 98.59% $\pm$ 0.21% | 152 |
+| 4 | RMSProp $\eta = 10^{-3}$ | `[256]` | shift $\pm 1$ px | 98.53% $\pm$ 0.22% | 107 |
+| 5 | Momentum $\eta = 0.1$ | `[256, 128]` | shift $\pm 2$ px | 98.49% $\pm$ 0.41% | 139 |
+
+La configuración elegida en el barrido por bloques (Adam $\eta = 10^{-3}$, `[128]`, $\pm 2$ px) da 98.22% $\pm$ 0.35% en la grilla.
+
+**Cuánto mueve la exactitud cada factor** (para cada nivel, la mejor configuración optimizando el resto; Figura `E2-G2_factor_effect`):
+
+| Factor | Peor nivel | Mejor nivel | Diferencia |
+| :--- | :--- | :--- | :---: |
+| Augmentation | sin shift (97.04%) | shift $\pm 2$ px (98.69%) | **1.65 puntos** |
+| Arquitectura | `[64]` (97.97%) | `[256, 128]` (98.69%) | 0.72 puntos |
+| Optimizador, con su mejor $\eta$ | Momentum (98.49%) | Adam (98.69%) | 0.20 puntos |
+| Activación oculta, con su mejor $\eta$ (sección 5) | $\tanh$ (98.54%) | ReLU (98.63%) | 0.09 puntos |
+
+**Efecto de cada factor con el resto fijo en la ganadora:**
+
+- **Optimizador y $\eta$** (`[256, 128]`, $\pm 2$ px; Figura `E2-G3_optimizer_lr`). Cada optimizador tiene su escala: Adam y RMSProp rinden en $\sim 10^{-3}$, Momentum en $\sim 10^{-1}$ y SGD en $\sim 1$. Con su mejor $\eta$, los cuatro quedan entre 98.49% y 98.69%, y cortan entre 139 y 155 épocas. La ventaja de velocidad de Adam y RMSProp de la sección 1 (≈ 3 veces menos épocas, medida en `[64]` sin augmentation) **no se repite** en esta red con shift: Adam solo corta antes (66 épocas) con $\eta = 3\cdot10^{-3}$, perdiendo 1.4 puntos (97.28%).
+- **Arquitectura y augmentation** (Adam $\eta = 3\cdot10^{-4}$; Figura `E2-G4_arch_aug`). Con shift $\pm 2$, pasar de `[64]` a `[256, 128]` suma 0.78 puntos (97.91% → 98.69%). El shift (el mejor de $\pm 1$ y $\pm 2$) suma entre 1.8 y 2.0 puntos en cualquier red: `[64]` con shift (97.91%) supera a `[256, 128]` sin shift (96.83%). $\pm 1$ y $\pm 2$ empatan en casi todas las redes; en `[256, 128]` gana $\pm 2$ (98.69% contra 98.38%).
+- **Augmentation como regularización** (Adam $\eta = 3\cdot10^{-4}$, `[256, 128]`; Figura `E2-G6_augmentation`):
+
+  | Augmentation | Train Accuracy | Val Accuracy | Brecha train − val | Recall del 5 (val) |
+  | :--- | :---: | :---: | :---: | :---: |
+  | Sin shift | 99.82% | 96.83% | 3.00 | 84.0% |
+  | Shift $\pm 1$ px | 99.89% | 98.38% | 1.51 | 95.1% |
+  | **Shift $\pm 2$ px** | 99.79% | **98.69%** | **1.10** | **96.9%** |
+
+  El train queda en ≈ 99.8% en los tres casos; lo que se achica es la brecha con validación.
+
+- **Conclusión:** el orden de importancia es augmentation ≫ arquitectura > optimizador > activación. La grilla confirma lo del barrido por bloques (el shift es lo que más rinde, el optimizador casi no cambia la exactitud final) y encuentra una configuración ≈ 0.5 puntos mejor, que el barrido por bloques no había probado porque nunca cruzó `[256, 128]` con shift.
+- **Limitaciones:** las 10 mejores configuraciones están dentro de 0.3 puntos, del orden del desvío entre semillas (0.29 en promedio en el top 10): la grilla alcanza para elegir, no para ordenarlas con certeza. Al elegir la mejor de 180 sobre la misma validación, su exactitud queda algo optimista. El mejor $\eta$ de SGD (1) es el mayor de su grilla, así que su óptimo puede estar más arriba.
+
+### 5. Función de Activación Oculta
+
+Barrido en `experiments/configs/ej2/activation.json` (`results/ej2_activation/summary.csv`): $\tanh$ (Xavier), sigmoide (Xavier) y ReLU (He) × 6 redes (`[64]`, `[128]`, `[256]`, `[128, 64]`, `[256, 128]`, `[128, 64, 32]`) × Adam $\eta \in \{10^{-4}, 10^{-3}, 10^{-2}\}$, con shift $\pm 2$ px y 3 semillas (162 corridas, todas `ok`). Figura `figures/ej2/grid/E2-G5_activation.png`.
+
+- **Con el mejor $\eta$ de cada una, las tres llegan al mismo techo:** ReLU 98.63%, sigmoide 98.55%, $\tanh$ 98.54% (mejor red de cada una). Red por red, la diferencia máxima entre activaciones es 0.45 puntos (en `[64]`: ReLU 97.93%, sigmoide 97.48%) y siempre queda dentro de las barras de error.
+- **Lo que sí cambia es la tolerancia a un $\eta$ grande:** con $\eta = 10^{-2}$ las tres empeoran mucho, y ReLU es la que peor queda (media 45% entre redes, contra 67% de $\tanh$ y 75% de sigmoide).
+- **Por eso la grilla de la sección 4 fija $\tanh$.** Solo se probó con Adam y shift $\pm 2$.
+
 ---
 
 ## (c) Resultado Oficial en Producción (`digits_test.csv`)
 
-La configuración ganadora de Ej2 (`[784, 128, 10]`, Adam $\eta=0.001$, `RandomShift` $\pm 2$ px, $\tanh$ + sigmoide + MSE) se reentrenó con el 100% de `digits.csv` durante la mediana de mejores épocas (72 épocas) y se evaluó **una sola vez** sobre `digits_test.csv` (2 497 muestras).
+**Hubo dos evaluaciones finales**, cada una con la configuración elegida solo por validación en su momento. El test no participó de ninguna decisión: la segunda evaluación se hizo porque la grilla (sección b.4) eligió, por validación, otra configuración.
 
-Reporte oficial en `results/ej2_final/final_eval.json`:
-
-| Métrica en Producción (Test) | Media $\pm$ Desvío (3 semillas) | Mejor Semilla (s0) |
+| | 1ª evaluación (barrido por bloques) | **2ª evaluación (grilla completa) — oficial** |
 | :--- | :---: | :---: |
-| **Exactitud (*Accuracy*)** | **88.31% $\pm$ 0.32%** | **88.63%** |
-| **Macro F1-Score** | $0.8366 \pm 0.0028$ | $0.8397$ |
-| **Pérdida MSE** | $0.01562 \pm 0.00083$ | $0.01496$ |
+| Configuración | `[784, 128, 10]`, Adam $\eta = 10^{-3}$, shift $\pm 2$ | **`[784, 256, 128, 10]`, Adam $\eta = 3\cdot10^{-4}$, shift $\pm 2$** |
+| Elegida desde | `results/ej2_extra_augmentation/f5f0383c` | `results/ej2_combo/fcdee1d5` |
+| Val Accuracy (selección) | 98.22% $\pm$ 0.35% | 98.69% $\pm$ 0.34% |
+| Épocas de reentrenamiento (mediana de `best_epoch`) | 72 | 141 |
+| **Test Accuracy** | 88.31% $\pm$ 0.32% | **88.68% $\pm$ 0.10%** |
+| Test por semilla (s0, s1, s2) | 88.63%, 88.31%, 87.99% | 88.79%, 88.59%, 88.67% |
+| Test Macro F1 | 0.8366 $\pm$ 0.0028 | 0.8398 $\pm$ 0.0010 |
+| Test MSE | 0.01562 $\pm$ 0.00083 | 0.01505 $\pm$ 0.00020 |
+| Reporte | `results/ej2_final/final_eval.json` | `results/ej2_final_grid/final_eval.json` |
 
-### Detalle por Clase en Test (Semilla s0)
+En ambos casos: $\tanh$ + Xavier, sigmoide + MSE, lote 32, reentrenamiento con el 100% de `digits.csv` sin validación ni early stopping, y **una sola** lectura de `digits_test.csv` (2 497 muestras), con 3 semillas.
+
+### Detalle por Clase en Test (2ª evaluación, media de 3 semillas)
 
 | Dígito | Muestras Test | Recall en Test | Precisión en Test | F1-Score |
 | :---: | :---: | :---: | :---: | :---: |
-| **0** | 245 | **100.00%** | 89.09% | 0.9423 |
-| **1** | 283 | **99.65%** | 96.25% | 0.9792 |
-| **2** | 258 | **98.06%** | 87.85% | 0.9267 |
-| **3** | 252 | **99.21%** | 73.96% | 0.8475 |
-| **4** | 245 | **100.00%** | 95.33% | 0.9761 |
-| **5** | 223 | **93.27%** | 89.66% | 0.9143 |
-| **6** | 239 | **98.74%** | 95.16% | 0.9692 |
-| **7** | 257 | **97.67%** | 95.80% | 0.9672 |
+| **0** | 245 | **99.32%** | 88.55% | 0.9361 |
+| **1** | 283 | **99.65%** | 97.14% | 0.9837 |
+| **2** | 258 | **97.80%** | 87.96% | 0.9261 |
+| **3** | 252 | **99.47%** | 75.66% | 0.8594 |
+| **4** | 245 | **98.78%** | 95.55% | 0.9713 |
+| **5** | 223 | **95.37%** | 88.64% | 0.9187 |
+| **6** | 239 | **98.19%** | 92.32% | 0.9515 |
+| **7** | 257 | **98.31%** | 95.01% | 0.9663 |
 | **8** | 243 | **0.00%** | **0.00%** | **0.0000** |
-| **9** | 252 | **96.43%** | 79.93% | 0.8741 |
+| **9** | 252 | **96.83%** | 81.46% | 0.8847 |
+
+Frente a la 1ª evaluación, la mejora (+0.37 puntos) está sobre todo en el dígito 5 (recall 92.68% → 95.37%), y el desvío entre semillas baja de 0.32 a 0.10.
 
 ### Análisis de la Cota Teórica y Discrepancia con Validación
 
 1. **La ausencia del Dígito 8:**
-   - En `digits.csv` hay **cero muestras del dígito 8**. En consecuencia, el modelo nunca aprendió sus rasgos y clasifica erróneamente el 100% de los 8s del test (confundiéndolos principalmente con 3, 2 y 9).
+   - En `digits.csv` hay **cero muestras del dígito 8**. En consecuencia, el modelo nunca aprendió sus rasgos y clasifica erróneamente el 100% de los 8s del test (en la semilla 0, principalmente como 3, 9, 2 y 0: 71, 61, 25 y 24 de 243).
    - Como el test tiene 243 ochos sobre 2 497 muestras ($9.73\%$), **la cota máxima teórica alcanzable en test para cualquier modelo de Ej2 es $90.27\%$**.
-   - El modelo alcanzó **88.31%**, lo que representa un **$97.83\%$ de exactitud relativa** sobre las clases que sí vio.
+   - El modelo alcanzó **88.68%**, lo que representa un **$98.24\%$ de exactitud** sobre las clases que sí vio (97.83% en la 1ª evaluación).
 2. **Sobreestimación de la Validación:**
-   - En validación se midió $98.22\%$ porque el split de `digits.csv` tampoco contenía ochos. La aparente caída de rendimiento en producción no refleja sobreajuste, sino que **el entrenamiento no es representativo: no tiene ningún 8**, y el test sí (243 de 2 497 muestras).
+   - En validación se midió $98.69\%$ porque el split de `digits.csv` tampoco contenía ochos. La aparente caída de rendimiento en producción no refleja sobreajuste, sino que **el entrenamiento no es representativo: no tiene ningún 8**, y el test sí (243 de 2 497 muestras).
+3. **La grilla mejora poco en test.** Medio punto de validación se tradujo en 0.37 puntos de test: con el 8 ausente, el límite lo ponen los datos, no la configuración.
 
-Figuras de referencia: `figures/ej2/E2-05_test_confusion_matrix.png` y `figures/ej2/E2-06_misclassified_test.png`.
-Modelo guardado para reuso: `models/ej2_best/` (`model.npz` + `config.json`).
+Figuras de referencia (2ª evaluación): `figures/ej2/grid/E2-05_test_confusion_matrix.png` y `figures/ej2/grid/E2-06_misclassified_test.png`. Las de la 1ª evaluación siguen en `figures/ej2/`.
+Modelo guardado para reuso: `models/ej2_best/` (`model.npz` + `config.json`), copia de `results/ej2_final_grid/final_s0` (2ª evaluación, semilla 0: 88.79% en test).

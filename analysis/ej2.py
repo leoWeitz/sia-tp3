@@ -462,13 +462,16 @@ def plot_augmentation_impact(results_dir: Path, out_dir: Path) -> Path:
     return save_figure(fig, out_dir / "E2-04_augmentation_impact")
 
 
-def plot_test_confusion_matrix(results_dir: Path, out_dir: Path) -> Path:
-    """Matriz de confusión en digits_test.csv para Ej2 Final."""
+def plot_test_confusion_matrix(
+    results_dir: Path, out_dir: Path, final_run: str = "ej2_final"
+) -> Path:
+    """Matriz de confusión en digits_test.csv del primer modelo (semilla 0) de final_run."""
     apply_style()
-    with open(results_dir / "ej2_final" / "final_eval.json") as f:
+    with open(results_dir / final_run / "final_eval.json") as f:
         report = json.load(f)
 
-    cm = np.array(report["models"][0]["test"]["confusion_matrix"])
+    first = report["models"][0]
+    cm = np.array(first["test"]["confusion_matrix"])
 
     fig, ax = plt.subplots(figsize=(7, 6))
     im = ax.imshow(cm, cmap="Blues", interpolation="nearest")
@@ -481,8 +484,10 @@ def plot_test_confusion_matrix(results_dir: Path, out_dir: Path) -> Path:
     ax.set_yticks(np.arange(n_classes))
     ax.set_xlabel("Predicción del Modelo")
     ax.set_ylabel("Etiqueta Verdadera")
+    mean, std = report["mean"]["accuracy"] * 100, report["std"]["accuracy"] * 100
     ax.set_title(
-        f"Matriz de Confusión en Test (Ej2 Final, Acc={report['mean']['accuracy'] * 100:.2f}%)"
+        f"Test · semilla {first['label'].lstrip('s')}: {first['test']['accuracy'] * 100:.2f} %"
+        f" (media {mean:.2f} ± {std:.2f} %)"
     )
 
     thresh = cm.max() / 2.0
@@ -510,10 +515,12 @@ def plot_test_confusion_matrix(results_dir: Path, out_dir: Path) -> Path:
     return save_figure(fig, out_dir / "E2-05_test_confusion_matrix")
 
 
-def plot_misclassified_test(results_dir: Path, test_path: Path, out_dir: Path) -> Path:
-    """Grilla de ejemplos del conjunto de test mal clasificados."""
+def plot_misclassified_test(
+    results_dir: Path, test_path: Path, out_dir: Path, final_run: str = "ej2_final"
+) -> Path:
+    """Grilla de ejemplos del conjunto de test mal clasificados (semilla 0 de final_run)."""
     apply_style()
-    with np.load(results_dir / "ej2_final" / "final_s0" / "test_predictions.npz") as preds:
+    with np.load(results_dir / final_run / "final_s0" / "test_predictions.npz") as preds:
         y_true = preds["labels_true"]
         y_pred = preds["labels_pred"]
 
