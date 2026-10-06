@@ -1,5 +1,5 @@
 {
-  "run_name": "ej2_final",
+  "run_name": "ej2_final_grid",
   "seed": 0,
   "fold": null,
   "trainer": "backprop",
@@ -28,6 +28,7 @@
   "model": {
     "layers": [
       784,
+      256,
       128,
       10
     ],
@@ -41,10 +42,10 @@
     "loss": "mse",
     "optimizer": {
       "kind": "adam",
-      "lr": 0.001
+      "lr": 0.0003
     },
     "batch_size": 32,
-    "epochs": 72,
+    "epochs": 141,
     "l2": 0.0,
     "augmentation": {
       "kind": "random_shift",
@@ -69,7 +70,7 @@
     "save_weights_history": false
   },
   "sweep": {},
-  "selected_from": "results/ej2_extra_augmentation/f5f0383c",
+  "selected_from": "results/ej2_combo/fcdee1d5",
   "final": {
     "mode": "retrain",
     "epochs": null,
